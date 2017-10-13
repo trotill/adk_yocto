@@ -1,0 +1,30 @@
+From 2c81e17216b4e471a1ce0bddb50f374b0722a2ce Mon Sep 17 00:00:00 2001
+From: Khem Raj <raj.khem@gmail.com>
+Date: Tue, 19 Jan 2016 18:18:52 -0800
+Subject: [PATCH 01/10] include sys/types.h for mode_t
+
+mode_t is used in target.h, so we need to include sys/types.h to get the
+defintion
+
+Signed-off-by: Khem Raj <raj.khem@gmail.com>
+---
+Upstream-Status: Pending
+
+ gdb/gdbserver/target.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/gdb/gdbserver/target.h b/gdb/gdbserver/target.h
+index 4c14c204bb..bdab18f7f7 100644
+--- a/gdb/gdbserver/target.h
++++ b/gdb/gdbserver/target.h
+@@ -28,6 +28,7 @@
+ #include "target/waitstatus.h"
+ #include "mem-break.h"
+ #include "btrace-common.h"
++#include <sys/types.h>
+ 
+ struct emit_ops;
+ struct buffer;
+-- 
+2.11.0
+

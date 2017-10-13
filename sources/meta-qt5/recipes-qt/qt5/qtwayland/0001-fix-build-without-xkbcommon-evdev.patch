@@ -1,0 +1,71 @@
+From 2b72ad7955fe19abb4a0b4ebb6bc7aa498e454bc Mon Sep 17 00:00:00 2001
+From: Raphael Freudiger <laser_b@gmx.ch>
+Date: Tue, 10 Jan 2017 15:49:55 +0100
+Subject: [PATCH] fix build without xkbcommon-evdev
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Change-Id: I4f52c4ad741fdd7063a18b67f5777b52f03726fe
+Signed-off-by: Raphael Freudiger <laser_b@gmx.ch>
+Signed-off-by: Gordan Markuš <gordan.markus@pelagicore.com>
+---
+ src/client/client.pro                              |  2 ++
+ src/compositor/compositor.pro                      |  2 ++
+ src/compositor/compositor_api/qwaylandkeyboard.cpp | 13 +++++++------
+ 3 files changed, 11 insertions(+), 6 deletions(-)
+
+diff --git a/src/client/client.pro b/src/client/client.pro
+index 7482cfd..cb3578c 100644
+--- a/src/client/client.pro
++++ b/src/client/client.pro
+@@ -120,3 +120,5 @@ MODULE_PLUGIN_TYPES = \
+             wayland-decoration-client \
+             wayland-shell-integration
+ load(qt_module)
++
++LIBS += -lxkbcommon
+diff --git a/src/compositor/compositor.pro b/src/compositor/compositor.pro
+index dc9000d..4eebfd6 100644
+--- a/src/compositor/compositor.pro
++++ b/src/compositor/compositor.pro
+@@ -32,3 +32,5 @@ include ($$PWD/extensions/extensions.pri)
+ MODULE_PLUGIN_TYPES = \
+     wayland-graphics-integration-server
+ load(qt_module)
++
++LIBS += -lxkbcommon
+diff --git a/src/compositor/compositor_api/qwaylandkeyboard.cpp b/src/compositor/compositor_api/qwaylandkeyboard.cpp
+index 55381b4..5c054c6 100644
+--- a/src/compositor/compositor_api/qwaylandkeyboard.cpp
++++ b/src/compositor/compositor_api/qwaylandkeyboard.cpp
+@@ -338,12 +338,6 @@ void QWaylandKeyboardPrivate::createXKBState(xkb_keymap *keymap)
+     xkb_state = xkb_state_new(keymap);
+ }
+ 
+-uint QWaylandKeyboardPrivate::toWaylandXkbV1Key(const uint nativeScanCode)
+-{
+-    const uint offset = 8;
+-    Q_ASSERT(nativeScanCode >= offset);
+-    return nativeScanCode - offset;
+-}
+ 
+ void QWaylandKeyboardPrivate::createXKBKeymap()
+ {
+@@ -373,6 +367,13 @@ void QWaylandKeyboardPrivate::createXKBKeymap()
+ }
+ #endif
+ 
++uint QWaylandKeyboardPrivate::toWaylandXkbV1Key(const uint nativeScanCode)
++{
++    const uint offset = 8;
++    Q_ASSERT(nativeScanCode >= offset);
++    return nativeScanCode - offset;
++}
++
+ void QWaylandKeyboardPrivate::sendRepeatInfo()
+ {
+     Q_FOREACH (Resource *resource, resourceMap()) {
+-- 
+2.9.3
+
