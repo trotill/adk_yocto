@@ -1,4 +1,12 @@
-# adk_yocto (ADAKTA support)
+# ADK (Adakta Development Kit) Yocto distribution
+  
+System build Linux kernel, u-boot, rootfs e.t.c  
+  
+Software support for devices:  
+https://adakta.ru/eng/products/system-on-module-ADAKTA-mx6-iMX6  
+https://adakta.ru/products/ADAKTA-AMX6-server  
+https://adakta.ru/products/ADAKTA-AMX6-media  
+https://adakta.ru/products/ADAKTA-AMX6-miniPC  
   
 How use?  
   
