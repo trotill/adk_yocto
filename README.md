@@ -1,4 +1,4 @@
-# adk_yocto
+# adk_yocto (ADAKTA support)
   
 How use?  
   
