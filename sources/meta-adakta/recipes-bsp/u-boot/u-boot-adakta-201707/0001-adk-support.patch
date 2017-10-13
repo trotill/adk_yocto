@@ -1,0 +1,2544 @@
+From e2c1b8866cc96baba8e576fe70553e84547e82a7 Mon Sep 17 00:00:00 2001
+From: ilya <monkeyhouse@mail.ru>
+Date: Thu, 28 Sep 2017 16:26:08 +0400
+Subject: [PATCH] adk support
+
+adk support
+
+adk support
+
+adk support
+
+adk support
+---
+ arch/arm/cpu/armv7/mx6/Kconfig         |   5 +
+ board/adakta/adk/1066mhz_4x128mx16.cfg |  42 ++
+ board/adakta/adk/1066mhz_4x256mx16.cfg |  42 ++
+ board/adakta/adk/800mhz_2x128mx16.cfg  |  42 ++
+ board/adakta/adk/800mhz_2x256mx16.cfg  |  42 ++
+ board/adakta/adk/800mhz_4x128mx16.cfg  |  42 ++
+ board/adakta/adk/800mhz_4x256mx16.cfg  |  42 ++
+ board/adakta/adk/Kconfig               |  12 +
+ board/adakta/adk/MAINTAINERS           |  11 +
+ board/adakta/adk/Makefile              |  10 +
+ board/adakta/adk/README                |  82 ++++
+ board/adakta/adk/README.mx6qsabrelite  |  72 ++++
+ board/adakta/adk/adk.c                 | 744 +++++++++++++++++++++++++++++++++
+ board/adakta/adk/clocks.cfg            |  47 +++
+ board/adakta/adk/ddr-setup.cfg         | 109 +++++
+ board/adakta/adk/imx6dl-adk.cfg        |  32 ++
+ board/adakta/adk/imx6dl2g-adk.cfg      |  32 ++
+ board/adakta/adk/imx6q-adk.cfg         |  32 ++
+ board/adakta/adk/imx6q2g-adk.cfg       |  32 ++
+ board/adakta/adk/imx6s-adk.cfg         |  32 ++
+ board/adakta/adk/imx6s1g-adk.cfg       |  32 ++
+ configs/imx6dl-adk_defconfig           |  50 +++
+ configs/imx6dl2g-adk_defconfig         |  50 +++
+ configs/imx6q-adk_defconfig            |  49 +++
+ configs/imx6q2g-adk_defconfig          |  49 +++
+ configs/imx6s-adk_defconfig            |  49 +++
+ configs/imx6s1g-adk_defconfig          |  50 +++
+ include/configs/adk.h                  | 457 ++++++++++++++++++++
+ 28 files changed, 2290 insertions(+)
+ create mode 100644 board/adakta/adk/1066mhz_4x128mx16.cfg
+ create mode 100644 board/adakta/adk/1066mhz_4x256mx16.cfg
+ create mode 100644 board/adakta/adk/800mhz_2x128mx16.cfg
+ create mode 100644 board/adakta/adk/800mhz_2x256mx16.cfg
+ create mode 100644 board/adakta/adk/800mhz_4x128mx16.cfg
+ create mode 100644 board/adakta/adk/800mhz_4x256mx16.cfg
+ create mode 100644 board/adakta/adk/Kconfig
+ create mode 100644 board/adakta/adk/MAINTAINERS
+ create mode 100644 board/adakta/adk/Makefile
+ create mode 100644 board/adakta/adk/README
+ create mode 100644 board/adakta/adk/README.mx6qsabrelite
+ create mode 100644 board/adakta/adk/adk.c
+ create mode 100644 board/adakta/adk/clocks.cfg
+ create mode 100644 board/adakta/adk/ddr-setup.cfg
+ create mode 100644 board/adakta/adk/imx6dl-adk.cfg
+ create mode 100644 board/adakta/adk/imx6dl2g-adk.cfg
+ create mode 100644 board/adakta/adk/imx6q-adk.cfg
+ create mode 100644 board/adakta/adk/imx6q2g-adk.cfg
+ create mode 100644 board/adakta/adk/imx6s-adk.cfg
+ create mode 100644 board/adakta/adk/imx6s1g-adk.cfg
+ create mode 100644 configs/imx6dl-adk_defconfig
+ create mode 100644 configs/imx6dl2g-adk_defconfig
+ create mode 100644 configs/imx6q-adk_defconfig
+ create mode 100644 configs/imx6q2g-adk_defconfig
+ create mode 100644 configs/imx6s-adk_defconfig
+ create mode 100644 configs/imx6s1g-adk_defconfig
+ create mode 100644 include/configs/adk.h
+
+diff --git a/arch/arm/cpu/armv7/mx6/Kconfig b/arch/arm/cpu/armv7/mx6/Kconfig
+index b7cf597..d002f52 100644
+--- a/arch/arm/cpu/armv7/mx6/Kconfig
++++ b/arch/arm/cpu/armv7/mx6/Kconfig
+@@ -361,6 +361,9 @@ config TARGET_LSHORE
+ config TARGET_MCS
+ 	bool "mcs"
+ 
++config TARGET_ADK
++	bool "adk"
++	
+ config TARGET_MED
+ 	bool "med"
+ 
+@@ -623,6 +626,8 @@ source "board/toradex/colibri_imx6/Kconfig"
+ source "board/udoo/Kconfig"
+ source "board/udoo/neo/Kconfig"
+ source "board/wandboard/Kconfig"
++source "board/adakta/adk/Kconfig"
+ source "board/warp/Kconfig"
+ 
++
+ endif
+diff --git a/board/adakta/adk/1066mhz_4x128mx16.cfg b/board/adakta/adk/1066mhz_4x128mx16.cfg
+new file mode 100644
+index 0000000..b565260
+--- /dev/null
++++ b/board/adakta/adk/1066mhz_4x128mx16.cfg
+@@ -0,0 +1,42 @@
++/*
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++DATA 4, MX6_MMDC_P0_MDPDC, 0x00020036
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00008000
++DATA 4, MX6_MMDC_P0_MDCFG0, 0x555A7974
++DATA 4, MX6_MMDC_P0_MDCFG1, 0xDB538F64
++DATA 4, MX6_MMDC_P0_MDCFG2, 0x01FF00DB
++DATA 4, MX6_MMDC_P0_MDRWD, 0x000026D2
++DATA 4, MX6_MMDC_P0_MDOR, 0x005A1023
++DATA 4, MX6_MMDC_P0_MDOTC, 0x09444040
++DATA 4, MX6_MMDC_P0_MDPDC, 0x00025576
++DATA 4, MX6_MMDC_P0_MDASP, 0x00000027
++DATA 4, MX6_MMDC_P0_MDCTL, 0x831A0000
++DATA 4, MX6_MMDC_P0_MDSCR, 0x04088032
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00008033
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00428031
++DATA 4, MX6_MMDC_P0_MDSCR, 0x19308030
++DATA 4, MX6_MMDC_P0_MDSCR, 0x04008040
++DATA 4, MX6_MMDC_P0_MPZQHWCTRL, 0xA1390003
++DATA 4, MX6_MMDC_P1_MPZQHWCTRL, 0xA1390003
++DATA 4, MX6_MMDC_P0_MDREF, 0x00005800
++DATA 4, MX6_MMDC_P0_MPODTCTRL, 0x00022227
++DATA 4, MX6_MMDC_P1_MPODTCTRL, 0x00022227
++DATA 4, MX6_MMDC_P0_MPDGCTRL0, 0x42720306
++DATA 4, MX6_MMDC_P0_MPDGCTRL1, 0x026F0266
++DATA 4, MX6_MMDC_P1_MPDGCTRL0, 0x4273030A
++DATA 4, MX6_MMDC_P1_MPDGCTRL1, 0x02740240
++DATA 4, MX6_MMDC_P0_MPRDDLCTL, 0x45393B3E
++DATA 4, MX6_MMDC_P1_MPRDDLCTL, 0x403A3747
++DATA 4, MX6_MMDC_P0_MPWRDLCTL, 0x40434541
++DATA 4, MX6_MMDC_P1_MPWRDLCTL, 0x473E4A3B
++DATA 4, MX6_MMDC_P0_MPWLDECTRL0, 0x0011000E
++DATA 4, MX6_MMDC_P0_MPWLDECTRL1, 0x000E001B
++DATA 4, MX6_MMDC_P1_MPWLDECTRL0, 0x00190015
++DATA 4, MX6_MMDC_P1_MPWLDECTRL1, 0x00070018
++DATA 4, MX6_MMDC_P0_MPMUR0, 0x00000800
++DATA 4, MX6_MMDC_P1_MPMUR0, 0x00000800
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00000000
++DATA 4, MX6_MMDC_P0_MAPSR, 0x00011006
+diff --git a/board/adakta/adk/1066mhz_4x256mx16.cfg b/board/adakta/adk/1066mhz_4x256mx16.cfg
+new file mode 100644
+index 0000000..9b8776e
+--- /dev/null
++++ b/board/adakta/adk/1066mhz_4x256mx16.cfg
+@@ -0,0 +1,42 @@
++/*
++ * 
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++DATA 4, MX6_MMDC_P0_MDPDC, 0x00020036
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00008000
++DATA 4, MX6_MMDC_P0_MDCFG0, 0x898E7974
++DATA 4, MX6_MMDC_P0_MDCFG1, 0xDB538F64
++DATA 4, MX6_MMDC_P0_MDCFG2, 0x01FF00DB
++DATA 4, MX6_MMDC_P0_MDRWD, 0x000026D2
++DATA 4, MX6_MMDC_P0_MDOR, 0x008E1023
++DATA 4, MX6_MMDC_P0_MDOTC, 0x09444040
++DATA 4, MX6_MMDC_P0_MDPDC, 0x00025576
++DATA 4, MX6_MMDC_P0_MDASP, 0x00000047
++DATA 4, MX6_MMDC_P0_MDCTL, 0x841A0000
++DATA 4, MX6_MMDC_P0_MDSCR, 0x04088032
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00008033
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00428031
++DATA 4, MX6_MMDC_P0_MDSCR, 0x19308030
++DATA 4, MX6_MMDC_P0_MDSCR, 0x04008040
++DATA 4, MX6_MMDC_P0_MPZQHWCTRL, 0xA1390003
++DATA 4, MX6_MMDC_P1_MPZQHWCTRL, 0xA1390003
++DATA 4, MX6_MMDC_P0_MDREF, 0x00007800
++DATA 4, MX6_MMDC_P0_MPODTCTRL, 0x00022227
++DATA 4, MX6_MMDC_P1_MPODTCTRL, 0x00022227
++DATA 4, MX6_MMDC_P0_MPDGCTRL0, 0x42740304
++DATA 4, MX6_MMDC_P0_MPDGCTRL1, 0x026e0265
++DATA 4, MX6_MMDC_P1_MPDGCTRL0, 0x02750306
++DATA 4, MX6_MMDC_P1_MPDGCTRL1, 0x02720244
++DATA 4, MX6_MMDC_P0_MPRDDLCTL, 0x463d4041
++DATA 4, MX6_MMDC_P1_MPRDDLCTL, 0x42413c47
++DATA 4, MX6_MMDC_P0_MPWRDLCTL, 0x37414441
++DATA 4, MX6_MMDC_P1_MPWRDLCTL, 0x4633473b
++DATA 4, MX6_MMDC_P0_MPWLDECTRL0, 0x0025001f
++DATA 4, MX6_MMDC_P0_MPWLDECTRL1, 0x00290027
++DATA 4, MX6_MMDC_P1_MPWLDECTRL0, 0x001f002b
++DATA 4, MX6_MMDC_P1_MPWLDECTRL1, 0x000f0029
++DATA 4, MX6_MMDC_P0_MPMUR0, 0x00000800
++DATA 4, MX6_MMDC_P1_MPMUR0, 0x00000800
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00000000
++DATA 4, MX6_MMDC_P0_MAPSR, 0x00011006
+diff --git a/board/adakta/adk/800mhz_2x128mx16.cfg b/board/adakta/adk/800mhz_2x128mx16.cfg
+new file mode 100644
+index 0000000..3c40e3a
+--- /dev/null
++++ b/board/adakta/adk/800mhz_2x128mx16.cfg
+@@ -0,0 +1,42 @@
++/*
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++DATA 4, MX6_MMDC_P0_MDPDC, 0x0002002D
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00008000
++DATA 4, MX6_MMDC_P0_MDCFG0, 0x40435323
++DATA 4, MX6_MMDC_P0_MDCFG1, 0xB66E8D63
++DATA 4, MX6_MMDC_P0_MDCFG2, 0x01FF00DB
++DATA 4, MX6_MMDC_P0_MDRWD, 0x000026D2
++DATA 4, MX6_MMDC_P0_MDOR, 0x00431023
++DATA 4, MX6_MMDC_P0_MDOTC, 0x00333030
++DATA 4, MX6_MMDC_P0_MDPDC, 0x0002556D
++DATA 4, MX6_MMDC_P0_MDASP, 0x00000017
++DATA 4, MX6_MMDC_P0_MDCTL, 0x83190000
++DATA 4, MX6_MMDC_P0_MDSCR, 0x04008032
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00008033
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00048031
++DATA 4, MX6_MMDC_P0_MDSCR, 0x13208030
++DATA 4, MX6_MMDC_P0_MDSCR, 0x04008040
++DATA 4, MX6_MMDC_P0_MPZQHWCTRL, 0xA1390003
++DATA 4, MX6_MMDC_P1_MPZQHWCTRL, 0xA1390003
++DATA 4, MX6_MMDC_P0_MDREF, 0x00005800
++DATA 4, MX6_MMDC_P0_MPODTCTRL, 0x00022227
++DATA 4, MX6_MMDC_P1_MPODTCTRL, 0x00022227
++DATA 4, MX6_MMDC_P0_MPDGCTRL0, 0x42350231
++DATA 4, MX6_MMDC_P1_MPDGCTRL0, 0x42350231
++DATA 4, MX6_MMDC_P0_MPDGCTRL1, 0x021A0218
++DATA 4, MX6_MMDC_P1_MPDGCTRL1, 0x021A0218
++DATA 4, MX6_MMDC_P0_MPRDDLCTL, 0x4B4B4E49
++DATA 4, MX6_MMDC_P1_MPRDDLCTL, 0x4B4B4E49
++DATA 4, MX6_MMDC_P0_MPWRDLCTL, 0x3F3F3035
++DATA 4, MX6_MMDC_P1_MPWRDLCTL, 0x3F3F3035
++DATA 4, MX6_MMDC_P0_MPWLDECTRL0, 0x0040003C
++DATA 4, MX6_MMDC_P0_MPWLDECTRL1, 0x0032003E
++DATA 4, MX6_MMDC_P1_MPWLDECTRL0, 0x0040003C
++DATA 4, MX6_MMDC_P1_MPWLDECTRL1, 0x0032003E
++DATA 4, MX6_MMDC_P0_MPMUR0, 0x00000800
++DATA 4, MX6_MMDC_P1_MPMUR0, 0x00000800
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00000000
++DATA 4, MX6_MMDC_P0_MAPSR, 0x00011006
+diff --git a/board/adakta/adk/800mhz_2x256mx16.cfg b/board/adakta/adk/800mhz_2x256mx16.cfg
+new file mode 100644
+index 0000000..a9651a5
+--- /dev/null
++++ b/board/adakta/adk/800mhz_2x256mx16.cfg
+@@ -0,0 +1,42 @@
++/*
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++DATA 4, MX6_MMDC_P0_MDPDC, 0x0002002D
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00008000
++DATA 4, MX6_MMDC_P0_MDCFG0, 0x696C5323
++DATA 4, MX6_MMDC_P0_MDCFG1, 0xB66E8D63
++DATA 4, MX6_MMDC_P0_MDCFG2, 0x01FF00DB
++DATA 4, MX6_MMDC_P0_MDRWD, 0x000026D2
++DATA 4, MX6_MMDC_P0_MDOR, 0x006C1023
++DATA 4, MX6_MMDC_P0_MDOTC, 0x00333030
++DATA 4, MX6_MMDC_P0_MDPDC, 0x0002556D
++DATA 4, MX6_MMDC_P0_MDASP, 0x00000027
++DATA 4, MX6_MMDC_P0_MDCTL, 0x84190000
++DATA 4, MX6_MMDC_P0_MDSCR, 0x04008032
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00008033
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00048031
++DATA 4, MX6_MMDC_P0_MDSCR, 0x13208030
++DATA 4, MX6_MMDC_P0_MDSCR, 0x04008040
++DATA 4, MX6_MMDC_P0_MPZQHWCTRL, 0xA1390003
++DATA 4, MX6_MMDC_P1_MPZQHWCTRL, 0xA1390003
++DATA 4, MX6_MMDC_P0_MDREF, 0x00007800
++DATA 4, MX6_MMDC_P0_MPODTCTRL, 0x00022227
++DATA 4, MX6_MMDC_P1_MPODTCTRL, 0x00022227
++DATA 4, MX6_MMDC_P0_MPDGCTRL0, 0x42350231
++DATA 4, MX6_MMDC_P0_MPDGCTRL1, 0x021A0218
++DATA 4, MX6_MMDC_P1_MPDGCTRL0, 0x42350231
++DATA 4, MX6_MMDC_P1_MPDGCTRL1, 0x021A0218
++DATA 4, MX6_MMDC_P0_MPRDDLCTL, 0x4B4B4E49
++DATA 4, MX6_MMDC_P1_MPRDDLCTL, 0x4B4B4E49
++DATA 4, MX6_MMDC_P0_MPWRDLCTL, 0x3F3F3035
++DATA 4, MX6_MMDC_P1_MPWRDLCTL, 0x3F3F3035
++DATA 4, MX6_MMDC_P0_MPWLDECTRL0, 0x0040003C
++DATA 4, MX6_MMDC_P0_MPWLDECTRL1, 0x0032003E
++DATA 4, MX6_MMDC_P1_MPWLDECTRL0, 0x0040003C
++DATA 4, MX6_MMDC_P1_MPWLDECTRL1, 0x0032003E
++DATA 4, MX6_MMDC_P0_MPMUR0, 0x00000800
++DATA 4, MX6_MMDC_P1_MPMUR0, 0x00000800
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00000000
++DATA 4, MX6_MMDC_P0_MAPSR, 0x00011006
+diff --git a/board/adakta/adk/800mhz_4x128mx16.cfg b/board/adakta/adk/800mhz_4x128mx16.cfg
+new file mode 100644
+index 0000000..447e26b
+--- /dev/null
++++ b/board/adakta/adk/800mhz_4x128mx16.cfg
+@@ -0,0 +1,42 @@
++/*
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++DATA 4, MX6_MMDC_P0_MDPDC, 0x0002002D
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00008000
++DATA 4, MX6_MMDC_P0_MDCFG0, 0x40435323
++DATA 4, MX6_MMDC_P0_MDCFG1, 0xB66E8D63
++DATA 4, MX6_MMDC_P0_MDCFG2, 0x01FF00DB
++DATA 4, MX6_MMDC_P0_MDRWD, 0x000026D2
++DATA 4, MX6_MMDC_P0_MDOR, 0x00431023
++DATA 4, MX6_MMDC_P0_MDOTC, 0x00333030
++DATA 4, MX6_MMDC_P0_MDPDC, 0x0002556D
++DATA 4, MX6_MMDC_P0_MDASP, 0x00000027
++DATA 4, MX6_MMDC_P0_MDCTL, 0x831A0000
++DATA 4, MX6_MMDC_P0_MDSCR, 0x04008032
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00008033
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00048031
++DATA 4, MX6_MMDC_P0_MDSCR, 0x13208030
++DATA 4, MX6_MMDC_P0_MDSCR, 0x04008040
++DATA 4, MX6_MMDC_P0_MPZQHWCTRL, 0xA1390003
++DATA 4, MX6_MMDC_P1_MPZQHWCTRL, 0xA1390003
++DATA 4, MX6_MMDC_P0_MDREF, 0x00005800
++DATA 4, MX6_MMDC_P0_MPODTCTRL, 0x00022227
++DATA 4, MX6_MMDC_P1_MPODTCTRL, 0x00022227
++DATA 4, MX6_MMDC_P0_MPDGCTRL0, 0x420F020F
++DATA 4, MX6_MMDC_P0_MPDGCTRL1, 0x01760175
++DATA 4, MX6_MMDC_P1_MPDGCTRL0, 0x41640171
++DATA 4, MX6_MMDC_P1_MPDGCTRL1, 0x015E0160
++DATA 4, MX6_MMDC_P0_MPRDDLCTL, 0x45464B4A
++DATA 4, MX6_MMDC_P1_MPRDDLCTL, 0x49484A46
++DATA 4, MX6_MMDC_P0_MPWRDLCTL, 0x40402E32
++DATA 4, MX6_MMDC_P1_MPWRDLCTL, 0x3A3A3231
++DATA 4, MX6_MMDC_P0_MPWLDECTRL0, 0x003A003A
++DATA 4, MX6_MMDC_P0_MPWLDECTRL1, 0x0030002F
++DATA 4, MX6_MMDC_P1_MPWLDECTRL0, 0x002F0038
++DATA 4, MX6_MMDC_P1_MPWLDECTRL1, 0x00270039
++DATA 4, MX6_MMDC_P0_MPMUR0, 0x00000800
++DATA 4, MX6_MMDC_P1_MPMUR0, 0x00000800
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00000000
++DATA 4, MX6_MMDC_P0_MAPSR, 0x00011006
+diff --git a/board/adakta/adk/800mhz_4x256mx16.cfg b/board/adakta/adk/800mhz_4x256mx16.cfg
+new file mode 100644
+index 0000000..7a4e569
+--- /dev/null
++++ b/board/adakta/adk/800mhz_4x256mx16.cfg
+@@ -0,0 +1,42 @@
++/*
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++DATA 4, MX6_MMDC_P0_MDPDC, 0x0002002D
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00008000
++DATA 4, MX6_MMDC_P0_MDCFG0, 0x696C5323
++DATA 4, MX6_MMDC_P0_MDCFG1, 0xB66E8D63
++DATA 4, MX6_MMDC_P0_MDCFG2, 0x01FF00DB
++DATA 4, MX6_MMDC_P0_MDRWD, 0x000026D2
++DATA 4, MX6_MMDC_P0_MDOR, 0x006C1023
++DATA 4, MX6_MMDC_P0_MDOTC, 0x00333030
++DATA 4, MX6_MMDC_P0_MDPDC, 0x0002556D
++DATA 4, MX6_MMDC_P0_MDASP, 0x00000047
++DATA 4, MX6_MMDC_P0_MDCTL, 0x841A0000
++DATA 4, MX6_MMDC_P0_MDSCR, 0x04008032
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00008033
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00048031
++DATA 4, MX6_MMDC_P0_MDSCR, 0x13208030
++DATA 4, MX6_MMDC_P0_MDSCR, 0x04008040
++DATA 4, MX6_MMDC_P0_MPZQHWCTRL, 0xA1390003
++DATA 4, MX6_MMDC_P1_MPZQHWCTRL, 0xA1390003
++DATA 4, MX6_MMDC_P0_MDREF, 0x00007800
++DATA 4, MX6_MMDC_P0_MPODTCTRL, 0x00022227
++DATA 4, MX6_MMDC_P1_MPODTCTRL, 0x00022227
++DATA 4, MX6_MMDC_P0_MPDGCTRL0, 0x42350231
++DATA 4, MX6_MMDC_P0_MPDGCTRL1, 0x021A0218
++DATA 4, MX6_MMDC_P1_MPDGCTRL0, 0x42350231
++DATA 4, MX6_MMDC_P1_MPDGCTRL1, 0x021A0218
++DATA 4, MX6_MMDC_P0_MPRDDLCTL, 0x4B4B4E49
++DATA 4, MX6_MMDC_P1_MPRDDLCTL, 0x4B4B4E49
++DATA 4, MX6_MMDC_P0_MPWRDLCTL, 0x3F3F3035
++DATA 4, MX6_MMDC_P1_MPWRDLCTL, 0x3F3F3035
++DATA 4, MX6_MMDC_P0_MPWLDECTRL0, 0x0040003C
++DATA 4, MX6_MMDC_P0_MPWLDECTRL1, 0x0032003E
++DATA 4, MX6_MMDC_P1_MPWLDECTRL0, 0x0040003C
++DATA 4, MX6_MMDC_P1_MPWLDECTRL1, 0x0032003E
++DATA 4, MX6_MMDC_P0_MPMUR0, 0x00000800
++DATA 4, MX6_MMDC_P1_MPMUR0, 0x00000800
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00000000
++DATA 4, MX6_MMDC_P0_MAPSR, 0x00011006
+diff --git a/board/adakta/adk/Kconfig b/board/adakta/adk/Kconfig
+new file mode 100644
+index 0000000..8aa3e32
+--- /dev/null
++++ b/board/adakta/adk/Kconfig
+@@ -0,0 +1,12 @@
++if TARGET_ADK
++
++config SYS_BOARD
++	default "adk"
++
++config SYS_VENDOR
++	default "adakta"
++
++config SYS_CONFIG_NAME
++	default "adk"
++
++endif
+diff --git a/board/adakta/adk/MAINTAINERS b/board/adakta/adk/MAINTAINERS
+new file mode 100644
+index 0000000..4a33b00
+--- /dev/null
++++ b/board/adakta/adk/MAINTAINERS
+@@ -0,0 +1,11 @@
++ADK BOARD
++M:	ilya Gorchakov <ilya.gorchakov@adakta.ru>
++S:	Maintained
++F:	board/adakta/adk/
++F:	include/configs/adk.h
++F:	configs/imx6dl-adk_defconfig
++F:	configs/imx6dl2g-adk_defconfig
++F:	configs/imx6q-adk_defconfig
++F:	configs/imx6q2g-adk_defconfig
++F:	configs/imx6s-adk_defconfig
++F:	configs/imx6s1g-adk_defconfig
+diff --git a/board/adakta/adk/Makefile b/board/adakta/adk/Makefile
+new file mode 100644
+index 0000000..52a619a
+--- /dev/null
++++ b/board/adakta/adk/Makefile
+@@ -0,0 +1,10 @@
++#
++# Copyright (C) 2017, Adakta <info@adakta.ru>
++# Copyright (C) 2012-2013, Guennadi Liakhovetski <lg@denx.de>
++# (C) Copyright 2012-2013 Freescale Semiconductor, Inc.
++# Copyright (C) 2013, Boundary Devices <info@boundarydevices.com>
++#
++# SPDX-License-Identifier:	GPL-2.0+
++#
++
++obj-y  := adk.o
+\ No newline at end of file
+diff --git a/board/adakta/adk/README b/board/adakta/adk/README
+new file mode 100644
+index 0000000..b78500a
+--- /dev/null
++++ b/board/adakta/adk/README
+@@ -0,0 +1,82 @@
++U-Boot for the Adakta ADK board
++
++1. Boot source, boot from SPI NOR
++---------------------------------
++In particular, this image supports booting from SPI NOR
++and saving the environment to SPI NOR.
++
++It does not support 'boot from SD' at offset 0x400
++except through the 'bmode' command.
++	http://lists.denx.de/pipermail/u-boot/2012-August/131151.html
++
++2. Boots using 6x_bootscript on SATA or SD card
++-----------------------------------------------
++The default bootcmd for these boards is configured
++to look for and source a boot script named '6x_bootscript'
++in the root of the first partition of the following
++devices:
++
++	sata 0
++	mmc 0
++	mmc 1
++
++They're searched in the order listed above, trying both the
++ext2 and fat filesystems.
++
++2. Maintaining the SPI NOR
++--------------------------
++A couple of convenience commands
++
++	clearenv - clear environment to factory default
++	upgradeu - look and source a boot script named
++		'6x_upgrade' to upgrade the U-Boot version
++		in SPI NOR. The search is the same as for
++		6x_bootscript described above.
++
++3. Display support
++------------------
++U-Boot support for the following displays is configured by
++default:
++
++    HDMI           - 1024 x 768 for maximum compatibility
++    Hannstar-XGA   - 1024 x 768 LVDS (Freescale part number MCIMX-LVDS1)
++    wsvga-lvds     - 1024 x 600 LVDS 
++    wvga-rgb       - 800 x 480 RGB 
++
++Since the ipuv3_fb display driver currently supports only a single display,
++this code auto-detects panel by probing the HDMI Phy for Hot Plug Detect
++or the I2C touch controller of the LVDS and RGB displays in the priority
++listed above.
++
++Setting 'panel' environment variable to one of the names above will
++override auto-detection and force activation of the specified panel.
++
++4. Building
++------------
++
++To build U-Boot for ADK board:
++
++	make adk_config
++	make
++
++The complete list of supported
++board configurations is shown in the boards.cfg file:
++	imx6q-adk		i.MX6Q/6D	1GB
++	imx6dl-adk		i.MX6DL		1GB
++	imx6s-adk		i.MX6S		512MB
++	imx6q2g-adk    	i.MX6Q/6D	2GB
++	imx6dl2g-adk		i.MX6DL		2GB
++	imx6s1g-adk		i.MX6S		1GB
++
++The -6q variants support either the i.MX6Quad or i.MX6Dual processors
++and are configured for a 64-bit memory bus at 1066 MHz.
++
++The -6dl variants also use a 64-bit memory bus, operated at 800MHz.
++
++The -6s variants use a 32-bit memory bus at 800MHz.
++
++If you place the u-boot.imx into a single-partition SD card
++along with a binary version of the boot script 6x_upgrade.txt,
++you can program it using 'upgradeu':
++
++	U-Boot> run upgradeu
+diff --git a/board/adakta/adk/README.mx6qsabrelite b/board/adakta/adk/README.mx6qsabrelite
+new file mode 100644
+index 0000000..12a9c85
+--- /dev/null
++++ b/board/adakta/adk/README.mx6qsabrelite
+@@ -0,0 +1,72 @@
++U-Boot for the Freescale i.MX6q SabreLite board
++
++This file contains information for the port of U-Boot to the Freescale
++i.MX6q SabreLite board.
++
++1. Boot source, boot from SD card
++---------------------------------
++
++The recent mainline U-Boot for the Freescale i.MX6q SabreLite board supports
++boot from SD card only. However, by default, the SabreLite
++boards boot from the SPI NOR flash. These boards need to be reflashed with
++a small SD card loader to support boot from SD card. This small SD card loader
++will be flashed into the SPI NOR. The board will still boot from SPI NOR, but
++the loader will in turn request the BootROM to load the U-Boot from SD card.
++
++The SD card loader is available from
++
++https://wiki.linaro.org/Boards/MX6QSabreLite
++
++under a open-source 3-clause BSD license.
++
++To update the SPI-NOR on the SabreLite board without the Freescale
++manufacturing tool use the following procedure:
++
++1. Write this SD card loader onto a large SD card using:
++
++ sudo dd if=iMX6DQ_SPI_to_uSDHC3.bin of=/dev/sXx
++
++Note: Replace sXx with the device representing the SD card in your system.
++
++Note: This writes SD card loader at address 0
++
++2. Put this SD card into the slot for the large SD card (SD3 on the bottom of
++the board). Make sure SW1 switch is at position "00", so that it can boot
++from the fuses.
++
++3. Power-up the SabreLite, press 'space' to enter command mode in the U-Boot
++(the default one the board is shipped with, starting from the SPI NOR) and
++enter the following commands:
++
++ MX6Q SABRELITE U-Boot > mmc dev 0
++ MX6Q SABRELITE U-Boot > mmc read 0x10800000 0 200
++ MX6Q SABRELITE U-Boot > sf probe
++ MX6Q SABRELITE U-Boot > sf erase 0 0x40000
++ MX6Q SABRELITE U-Boot > sf write 0x10800000 0 0x40000
++
++4. done.
++
++In case you somehow do not succeed with this procedure you will have to use
++the Freescale manufacturing tool in order to reflash the SPI-NOR.
++
++Note: The board now boots from full size SD3 on the bottom of the board. NOT
++      the micro SD4/BOOT slot on the top of the board. I.e. you have to use
++      full size SD cards.
++
++This information is taken from
++
++https://wiki.linaro.org/Boards/MX6QSabreLite
++
++2. Build
++--------
++
++To build U-Boot for the SabreLite board:
++
++ make mx6qsabrelite_config
++ make
++
++To copy the resulting u-boot.imx to the SD card:
++
++ sudo dd if=u-boot.imx of=/dev/sXx bs=512 seek=2&&sudo sync
++
++Note: Replace sXx with the device representing the SD card in your system.
+diff --git a/board/adakta/adk/adk.c b/board/adakta/adk/adk.c
+new file mode 100644
+index 0000000..e9ffda6
+--- /dev/null
++++ b/board/adakta/adk/adk.c
+@@ -0,0 +1,744 @@
++/*
++ * Copyright (C) 2017, Adakta <info@adakta.ru>
++ * Copyright (C) 2010-2013 Freescale Semiconductor, Inc.
++ * Copyright (C) 2013, Boundary Devices <info@boundarydevices.com>
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch/clock.h>
++#include <asm/arch/imx-regs.h>
++#include <asm/arch/iomux.h>
++#include <asm/arch/sys_proto.h>
++#include <malloc.h>
++#include <asm/arch/mx6-pins.h>
++#include <linux/errno.h>
++#include <asm/gpio.h>
++#include <asm/imx-common/boot_mode.h>
++#include <asm/imx-common/fbpanel.h>
++#include <asm/imx-common/iomux-v3.h>
++#include <asm/imx-common/mxc_i2c.h>
++#include <asm/imx-common/sata.h>
++#include <asm/imx-common/spi.h>
++#include <mmc.h>
++#include <fsl_esdhc.h>
++#include <splash.h>
++#include <asm/arch/crm_regs.h>
++#include <asm/arch/mxc_hdmi.h>
++#include <micrel.h>
++#include <miiphy.h>
++#include <i2c.h>
++#include <input.h>
++#include <netdev.h>
++#include <usb/ehci-ci.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++#define INPUT_FLOAT	(PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | \
++	PAD_CTL_HYS | PAD_CTL_SRE_SLOW)
++
++#define OUTPUT_40OHM	(PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm)
++
++#define PAD_CTRL_ENET_MDC (PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
++#define PAD_CTRL_ENET_MDIO (PAD_CTL_PUS_100K_UP |		\
++	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
++
++#define PAD_CTRL_ENET_RX	(PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
++#define PAD_CTRL_ENET_RX_DN	(PAD_CTL_PUS_100K_DOWN | PAD_CTRL_ENET_RX)
++#define PAD_CTRL_ENET_RX_UP	(PAD_CTL_PUS_100K_UP | PAD_CTRL_ENET_RX)
++
++#define PAD_CTRL_ENET_TX	(PAD_CTRL_ENET_RX)
++
++#define WEAK_PULLDN	(PAD_CTL_PUS_100K_DOWN |		\
++	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
++	PAD_CTL_HYS | PAD_CTL_SRE_SLOW)
++
++#define WEAK_PULLDN_OUTPUT (PAD_CTL_PUS_100K_DOWN |		\
++	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
++	PAD_CTL_SRE_SLOW)
++
++#define WEAK_PULLUP	(PAD_CTL_PUS_100K_UP |			\
++	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
++	PAD_CTL_HYS | PAD_CTL_SRE_SLOW)
++
++#define WEAK_PULLUP_OUTPUT (PAD_CTL_PUS_100K_UP |		\
++	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
++	PAD_CTL_SRE_SLOW)
++
++
++DECLARE_GLOBAL_DATA_PTR;
++
++#define BUTTON_PAD_CTRL	(PAD_CTL_PUS_100K_UP |			\
++	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
++
++#define ENET_PAD_CTRL	(PAD_CTL_PUS_100K_UP |			\
++	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
++
++#define I2C_PAD_CTRL	(PAD_CTL_PUS_100K_UP |			\
++	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS |	\
++	PAD_CTL_ODE | PAD_CTL_SRE_FAST)
++
++#define OUTPUT_40OHM	(PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm)
++
++#define RGB_PAD_CTRL	PAD_CTL_DSE_120ohm
++
++#define SPI_PAD_CTRL	(PAD_CTL_HYS | PAD_CTL_SPEED_MED |	\
++	PAD_CTL_DSE_40ohm | PAD_CTL_SRE_FAST)
++
++#define UART_PAD_CTRL	(PAD_CTL_PUS_100K_UP |			\
++	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
++	PAD_CTL_HYS | PAD_CTL_SRE_FAST)
++
++#define USDHC_PAD_CTRL	(PAD_CTL_PUS_47K_UP |			\
++	PAD_CTL_SPEED_LOW | PAD_CTL_DSE_80ohm |			\
++	PAD_CTL_HYS | PAD_CTL_SRE_FAST)
++
++#define WEAK_PULLDN	(PAD_CTL_PUS_100K_DOWN |		\
++	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
++	PAD_CTL_HYS | PAD_CTL_SRE_SLOW)
++
++#define WEAK_PULLDN_OUTPUT (PAD_CTL_PUS_100K_DOWN |		\
++	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
++	PAD_CTL_SRE_SLOW)
++
++#define WEAK_PULLUP	(PAD_CTL_PUS_100K_UP |			\
++	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
++	PAD_CTL_HYS | PAD_CTL_SRE_SLOW)
++
++#define WEAK_PULLUP_OUTPUT (PAD_CTL_PUS_100K_UP |		\
++	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
++	PAD_CTL_SRE_SLOW)
++/*
++ *
++ */
++static const iomux_v3_cfg_t init_pads[] = {
++	/* ECSPI1 */
++	IOMUX_PAD_CTRL(EIM_D17__ECSPI1_MISO, SPI_PAD_CTRL),
++	IOMUX_PAD_CTRL(EIM_D18__ECSPI1_MOSI, SPI_PAD_CTRL),
++	IOMUX_PAD_CTRL(EIM_D16__ECSPI1_SCLK, SPI_PAD_CTRL),
++#define GP_ECSPI1_NOR_CS	IMX_GPIO_NR(3, 19)
++	IOMUX_PAD_CTRL(EIM_D19__GPIO3_IO19, WEAK_PULLUP),
++
++	/* ECSPI2 */
++	IOMUX_PAD_CTRL(CSI0_DAT10__ECSPI2_MISO, SPI_PAD_CTRL),
++	IOMUX_PAD_CTRL(CSI0_DAT9__ECSPI2_MOSI, SPI_PAD_CTRL),
++	IOMUX_PAD_CTRL(CSI0_DAT8__ECSPI2_SCLK, SPI_PAD_CTRL),
++
++
++	/* ENET pads that don't change for PHY reset */
++	IOMUX_PAD_CTRL(ENET_MDIO__ENET_MDIO, ENET_PAD_CTRL),
++	IOMUX_PAD_CTRL(ENET_MDC__ENET_MDC, ENET_PAD_CTRL),
++	IOMUX_PAD_CTRL(RGMII_TXC__RGMII_TXC, ENET_PAD_CTRL),
++	IOMUX_PAD_CTRL(RGMII_TD0__RGMII_TD0, ENET_PAD_CTRL),
++	IOMUX_PAD_CTRL(RGMII_TD1__RGMII_TD1, ENET_PAD_CTRL),
++	IOMUX_PAD_CTRL(RGMII_TD2__RGMII_TD2, ENET_PAD_CTRL),
++	IOMUX_PAD_CTRL(RGMII_TD3__RGMII_TD3, ENET_PAD_CTRL),
++	IOMUX_PAD_CTRL(RGMII_TX_CTL__RGMII_TX_CTL, ENET_PAD_CTRL),
++	IOMUX_PAD_CTRL(ENET_REF_CLK__ENET_TX_CLK, ENET_PAD_CTRL),
++	/* pin 42 PHY nRST */
++
++#define GP_ENET_PHY_RESET_ADK	IMX_GPIO_NR(3, 23)
++	IOMUX_PAD_CTRL(EIM_D23__GPIO3_IO23, WEAK_PULLUP),
++#define GPIRQ_ENET_PHY		IMX_GPIO_NR(1, 28)
++	IOMUX_PAD_CTRL(ENET_TX_EN__GPIO1_IO28, WEAK_PULLUP),
++
++	/* gpio_Keys - Button assignments for J14 */
++#define GP_GPIOKEY_BACK		IMX_GPIO_NR(2, 2)
++	IOMUX_PAD_CTRL(NANDF_D2__GPIO2_IO02, BUTTON_PAD_CTRL),
++#define GP_GPIOKEY_HOME		IMX_GPIO_NR(2, 4)
++	IOMUX_PAD_CTRL(NANDF_D4__GPIO2_IO04, BUTTON_PAD_CTRL),
++#define GP_GPIOKEY_MENU		IMX_GPIO_NR(2, 1)
++	IOMUX_PAD_CTRL(NANDF_D1__GPIO2_IO01, BUTTON_PAD_CTRL),
++	/* Labeled Search (mapped to Power under Android) */
++#define GP_GPIOKEY_POWER	IMX_GPIO_NR(2, 3)
++	IOMUX_PAD_CTRL(NANDF_D3__GPIO2_IO03, BUTTON_PAD_CTRL),
++#define GP_GPIOKEY_VOL_DOWN	IMX_GPIO_NR(4, 5)
++	IOMUX_PAD_CTRL(GPIO_19__GPIO4_IO05, BUTTON_PAD_CTRL),
++#define GP_GPIOKEY_VOL_UP	IMX_GPIO_NR(7, 13)
++	IOMUX_PAD_CTRL(GPIO_18__GPIO7_IO13, BUTTON_PAD_CTRL),
++
++	/* i2c1_SGTL5000 sys_mclk */
++	IOMUX_PAD_CTRL(GPIO_0__CCM_CLKO1, OUTPUT_40OHM),
++	/* Needed if inappropriately used with SOM2 carrier board */
++#define GP_SGTL5000_HP_MUTE	IMX_GPIO_NR(3, 29)		/* Low is muted */
++	IOMUX_PAD_CTRL(EIM_D29__GPIO3_IO29, WEAK_PULLUP),
++
++	/* i2c2 ov5640 mipi Camera controls */
++#define GP_OV5640_MIPI_POWER_DOWN	IMX_GPIO_NR(6, 9)
++	IOMUX_PAD_CTRL(NANDF_WP_B__GPIO6_IO09, WEAK_PULLUP),
++
++	/* PWM4 - Backlight on LVDS connector: J6 */
++#define GP_BACKLIGHT_LVDS	IMX_GPIO_NR(1, 18)
++	IOMUX_PAD_CTRL(SD1_CMD__GPIO1_IO18, WEAK_PULLDN),
++
++	/* reg_usbotg_vbus */
++#define GP_REG_USBOTG		IMX_GPIO_NR(3, 22)
++	IOMUX_PAD_CTRL(EIM_D22__GPIO3_IO22, WEAK_PULLDN),
++
++	/* UART1 */
++	IOMUX_PAD_CTRL(SD3_DAT6__UART1_RX_DATA, UART_PAD_CTRL),
++	IOMUX_PAD_CTRL(SD3_DAT7__UART1_TX_DATA, UART_PAD_CTRL),
++
++	/* UART2 */
++#ifndef CONFIG_SILENT_UART
++	IOMUX_PAD_CTRL(EIM_D26__UART2_TX_DATA, UART_PAD_CTRL),
++	IOMUX_PAD_CTRL(EIM_D27__UART2_RX_DATA, UART_PAD_CTRL),
++#else
++	IOMUX_PAD_CTRL(EIM_D26__GPIO3_IO26, UART_PAD_CTRL),
++	IOMUX_PAD_CTRL(EIM_D27__GPIO3_IO27, UART_PAD_CTRL),
++#endif
++
++	/* USBH1 */
++	IOMUX_PAD_CTRL(EIM_D30__USB_H1_OC, WEAK_PULLUP),
++#define GP_USB_HUB_RESET	IMX_GPIO_NR(7, 12)
++	IOMUX_PAD_CTRL(GPIO_17__GPIO7_IO12, WEAK_PULLDN),
++
++	/* USBOTG */
++	IOMUX_PAD_CTRL(GPIO_1__USB_OTG_ID, WEAK_PULLUP),
++	IOMUX_PAD_CTRL(KEY_COL4__USB_OTG_OC, WEAK_PULLUP),
++
++	/* USDHC3 - sdcard */
++	IOMUX_PAD_CTRL(SD3_CLK__SD3_CLK, USDHC_PAD_CTRL),
++	IOMUX_PAD_CTRL(SD3_CMD__SD3_CMD, USDHC_PAD_CTRL),
++	IOMUX_PAD_CTRL(SD3_DAT0__SD3_DATA0, USDHC_PAD_CTRL),
++	IOMUX_PAD_CTRL(SD3_DAT1__SD3_DATA1, USDHC_PAD_CTRL),
++	IOMUX_PAD_CTRL(SD3_DAT2__SD3_DATA2, USDHC_PAD_CTRL),
++	IOMUX_PAD_CTRL(SD3_DAT3__SD3_DATA3, USDHC_PAD_CTRL),
++#define GP_USDHC3_CD		IMX_GPIO_NR(7, 0)
++	IOMUX_PAD_CTRL(SD3_DAT5__GPIO7_IO00, WEAK_PULLUP),
++
++	/* USDHC4 - sdcard */
++	IOMUX_PAD_CTRL(SD4_CLK__SD4_CLK, USDHC_PAD_CTRL),
++	IOMUX_PAD_CTRL(SD4_CMD__SD4_CMD, USDHC_PAD_CTRL),
++	IOMUX_PAD_CTRL(SD4_DAT0__SD4_DATA0, USDHC_PAD_CTRL),
++	IOMUX_PAD_CTRL(SD4_DAT1__SD4_DATA1, USDHC_PAD_CTRL),
++	IOMUX_PAD_CTRL(SD4_DAT2__SD4_DATA2, USDHC_PAD_CTRL),
++	IOMUX_PAD_CTRL(SD4_DAT3__SD4_DATA3, USDHC_PAD_CTRL),
++	IOMUX_PAD_CTRL(SD4_DAT4__SD4_DATA4, USDHC_PAD_CTRL),
++	IOMUX_PAD_CTRL(SD4_DAT5__SD4_DATA5, USDHC_PAD_CTRL),
++	IOMUX_PAD_CTRL(SD4_DAT6__SD4_DATA6, USDHC_PAD_CTRL),
++	IOMUX_PAD_CTRL(SD4_DAT7__SD4_DATA7, USDHC_PAD_CTRL),
++#define GP_USDHC4_CD		IMX_GPIO_NR(2, 6)
++	IOMUX_PAD_CTRL(NANDF_D6__GPIO2_IO06, WEAK_PULLUP),
++
++};
++
++static const iomux_v3_cfg_t enet_KSZ9031_gpio_pads[] = {
++	/* pin 35 - 1 (PHY_AD2) on reset */
++#define GP_KSZ9031_AD2		IMX_GPIO_NR(6, 30)
++	IOMUX_PAD_CTRL(RGMII_RXC__GPIO6_IO30, WEAK_PULLUP_OUTPUT),
++	/* pin 32 - 1 - (MODE0) all */
++#define GP_KSZ9031_MODE0		IMX_GPIO_NR(6, 25)
++	IOMUX_PAD_CTRL(RGMII_RD0__GPIO6_IO25, WEAK_PULLUP_OUTPUT),
++	/* pin 31 - 1 - (MODE1) all */
++#define GP_KSZ9031_MODE1		IMX_GPIO_NR(6, 27)
++	IOMUX_PAD_CTRL(RGMII_RD1__GPIO6_IO27, WEAK_PULLUP_OUTPUT),
++	/* pin 28 - 1 - (MODE2) all */
++#define GP_KSZ9031_MODE2		IMX_GPIO_NR(6, 28)
++	IOMUX_PAD_CTRL(RGMII_RD2__GPIO6_IO28, WEAK_PULLUP_OUTPUT),
++	/* pin 27 - 1 - (MODE3) all */
++#define GP_KSZ9031_MODE3		IMX_GPIO_NR(6, 29)
++	IOMUX_PAD_CTRL(RGMII_RD3__GPIO6_IO29, WEAK_PULLUP_OUTPUT),
++	/* pin 33 - 1 - (CLK125_EN) 125Mhz clockout enabled */
++#define GP_KSZ9031_CLK125		IMX_GPIO_NR(6, 24)
++	IOMUX_PAD_CTRL(RGMII_RX_CTL__GPIO6_IO24, WEAK_PULLUP_OUTPUT),
++};
++
++
++static const iomux_v3_cfg_t enet_pads[] = {
++	IOMUX_PAD_CTRL(RGMII_RXC__RGMII_RXC, ENET_PAD_CTRL),
++	IOMUX_PAD_CTRL(RGMII_RD0__RGMII_RD0, ENET_PAD_CTRL),
++	IOMUX_PAD_CTRL(RGMII_RD1__RGMII_RD1, ENET_PAD_CTRL),
++	IOMUX_PAD_CTRL(RGMII_RD2__RGMII_RD2, ENET_PAD_CTRL),
++	IOMUX_PAD_CTRL(RGMII_RD3__RGMII_RD3, ENET_PAD_CTRL),
++	IOMUX_PAD_CTRL(RGMII_RX_CTL__RGMII_RX_CTL, ENET_PAD_CTRL),
++};
++
++
++/*
++ *
++ */
++static struct i2c_pads_info i2c_pads[] = {
++	/* I2C1, SGTL5000 */
++	I2C_PADS_INFO_ENTRY(I2C1, EIM_D21, 3, 21, EIM_D28, 3, 28, I2C_PAD_CTRL),
++	/* I2C2 Camera, MIPI */
++	I2C_PADS_INFO_ENTRY(I2C2, KEY_COL3, 4, 12, KEY_ROW3, 4, 13, I2C_PAD_CTRL),
++	/* I2C3, J15 - RGB connector */
++	I2C_PADS_INFO_ENTRY(I2C3, GPIO_5, 1, 05, GPIO_16, 7, 11, I2C_PAD_CTRL),
++};
++
++int dram_init(void)
++{
++	gd->ram_size = imx_ddr_size();
++	return 0;
++}
++
++#ifdef CONFIG_USB_EHCI_MX6
++int board_ehci_hcd_init(int port)
++{
++	if (port) {
++		/* Reset USB hub */
++		gpio_set_value(GP_USB_HUB_RESET, 0);
++		mdelay(2);
++		gpio_set_value(GP_USB_HUB_RESET, 1);
++	}
++	return 0;
++}
++
++int board_ehci_power(int port, int on)
++{
++	if (port)
++		return 0;
++	gpio_set_value(GP_REG_USBOTG, on);
++	return 0;
++}
++
++#endif
++
++#ifdef CONFIG_FSL_ESDHC
++static struct fsl_esdhc_cfg usdhc_cfg[] = {
++	{.esdhc_base = USDHC3_BASE_ADDR, .bus_width = 4},
++	{.esdhc_base = USDHC4_BASE_ADDR, .bus_width = 8},
++};
++
++int board_mmc_getcd(struct mmc *mmc)
++{
++	struct fsl_esdhc_cfg *cfg = (struct fsl_esdhc_cfg *)mmc->priv;
++	int gp_cd = (cfg->esdhc_base == USDHC3_BASE_ADDR) ? GP_USDHC3_CD :
++			GP_USDHC4_CD;
++
++	return !gpio_get_value(gp_cd);
++}
++
++int board_mmc_init(bd_t *bis)
++{
++	int ret;
++	u32 index = 0;
++
++	usdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);
++	usdhc_cfg[1].sdhc_clk = mxc_get_clock(MXC_ESDHC4_CLK);
++
++	for (index = 0; index < CONFIG_SYS_FSL_USDHC_NUM; ++index) {
++		switch (index) {
++		case 0:
++		case 1:
++			break;
++		default:
++			printf("Warning: you configured more USDHC controllers"
++				"(%d) then supported by the board (%d)\n",
++				index + 1, CONFIG_SYS_FSL_USDHC_NUM);
++			return -EINVAL;
++		}
++
++		ret = fsl_esdhc_initialize(bis, &usdhc_cfg[index]);
++		if (ret)
++			return ret;
++	}
++	return 0;
++}
++#endif
++
++#ifdef CONFIG_MXC_SPI
++int board_spi_cs_gpio(unsigned bus, unsigned cs)
++{
++	if (bus == 0 && cs == 0)
++		return GP_ECSPI1_NOR_CS;
++
++	if (cs >> 8)
++		return (cs >> 8);
++	return -1;
++}
++#endif
++
++static void setup_iomux_enet(int ksz)
++{
++
++	gpio_direction_output(GP_ENET_PHY_RESET_ADK, 0);
++	
++	gpio_direction_output(GP_KSZ9031_AD2, 1);
++	gpio_direction_output(GP_KSZ9031_MODE0, 1);
++	gpio_direction_output(GP_KSZ9031_MODE1, 1);
++	gpio_direction_output(GP_KSZ9031_MODE2, 1);
++	gpio_direction_output(GP_KSZ9031_MODE3, 1);
++	gpio_direction_output(GP_KSZ9031_CLK125, 1);
++	SETUP_IOMUX_PADS(enet_KSZ9031_gpio_pads);
++	
++
++	/* Need delay 10ms according to KSZ9031 spec */
++	udelay(1000 * 10);
++
++	gpio_set_value(GP_ENET_PHY_RESET_ADK, 1);
++	/* strap hold time for AR8035, 5 fails, 6 works, so 12 should be safe */
++	udelay(12);
++
++	SETUP_IOMUX_PADS(enet_pads);
++	udelay(100);	/* Wait 100 us before using mii interface */
++}
++
++
++int splash_screen_prepare(void)
++{
++	char *env_loadsplash;
++
++	if (!getenv("splashimage") || !getenv("splashsize")) {
++		return -1;
++	}
++
++	env_loadsplash = getenv("loadsplash");
++	if (env_loadsplash == NULL) {
++		printf("Environment variable loadsplash not found!\n");
++		return -1;
++	}
++
++	if (run_command_list(env_loadsplash, -1, 0)) {
++		printf("failed to run loadsplash %s\n\n", env_loadsplash);
++		return -1;
++	}
++
++	return 0;
++}
++
++int board_phy_config(struct phy_device *phydev)
++{
++
++
++	setup_iomux_enet(1);
++#define MBA6X_KSZ9031_CTRL_SKEW	0x0032
++#define MBA6X_KSZ9031_CLK_SKEW	0x03ff
++#define MBA6X_KSZ9031_RX_SKEW	0x3333
++#define MBA6X_KSZ9031_TX_SKEW	0x2036
++
++	/* min rx/tx ctrl delay */
++	ksz9031_phy_extended_write(phydev, 2,
++				   MII_KSZ9031_EXT_RGMII_CTRL_SIG_SKEW,
++				   MII_KSZ9031_MOD_DATA_NO_POST_INC,
++				   MBA6X_KSZ9031_CTRL_SKEW);
++	/* min rx delay */
++	ksz9031_phy_extended_write(phydev, 2,
++				   MII_KSZ9031_EXT_RGMII_RX_DATA_SKEW,
++				   MII_KSZ9031_MOD_DATA_NO_POST_INC,
++				   MBA6X_KSZ9031_RX_SKEW);
++	/* max tx delay */
++	ksz9031_phy_extended_write(phydev, 2,
++				   MII_KSZ9031_EXT_RGMII_TX_DATA_SKEW,
++				   MII_KSZ9031_MOD_DATA_NO_POST_INC,
++				   MBA6X_KSZ9031_TX_SKEW);
++	/* rx/tx clk skew */
++	ksz9031_phy_extended_write(phydev, 2,
++				   MII_KSZ9031_EXT_RGMII_CLOCK_SKEW,
++				   MII_KSZ9031_MOD_DATA_NO_POST_INC,
++				   MBA6X_KSZ9031_CLK_SKEW);
++
++	phydev->drv->config(phydev);
++
++	return 0;
++}
++
++
++#ifdef CONFIG_CMD_FBPANEL
++void board_enable_lvds(const struct display_info_t *di, int enable)
++{
++	gpio_direction_output(GP_BACKLIGHT_LVDS, enable);
++}
++
++static const struct display_info_t displays[] = {
++	/* hdmi */
++	VD_1280_720M_60(HDMI, fbp_detect_i2c, 1, 0x50),
++	VD_1920_1080M_60(HDMI, NULL, 1, 0x50),
++	VD_1024_768M_60(HDMI, NULL, 1, 0x50),
++	VD_640_480M_60(HDMI, NULL, 1, 0x50),
++	VD_720_480M_60(HDMI, NULL, 1, 0x50),
++
++	/* ft5x06 */
++	VD_HANNSTAR7(LVDS, fbp_detect_i2c, 2, 0x38),
++	VD_AUO_B101EW05(LVDS, NULL, 2, 0x38),
++	VD_LG1280_800(LVDS, NULL, 2, 0x38),
++	VD_DT070BTFT(LVDS, NULL, 2, 0x38),
++	VD_WSVGA(LVDS, NULL, 2, 0x38),
++	VD_TM070JDHG30(LVDS, NULL, 2, 0x38),
++
++	/* ili210x */
++	VD_AMP1024_600(LVDS, fbp_detect_i2c, 2, 0x41),
++
++	/* egalax_ts */
++	VD_HANNSTAR(LVDS, fbp_detect_i2c, 2, 0x04),
++	VD_LG9_7(LVDS, NULL, 2, 0x04),
++
++	VD_SHARP_LQ101K1LY04(LVDS, NULL, 0, 0x00),
++	VD_WXGA_J(LVDS, NULL, 0, 0x00),
++	VD_WXGA(LVDS, NULL, 0, 0x00),
++	VD_WVGA(LVDS, NULL, 0, 0x00),
++	VD_AA065VE11(LVDS, NULL, 0, 0x00),
++	VD_VGA(LVDS, NULL, 0, 0x00),
++
++};
++int board_cfb_skip(void)
++{
++	return NULL != getenv("novideo");
++}
++#define display_cnt	ARRAY_SIZE(displays)
++#else
++#define displays	NULL
++#define display_cnt	0
++#endif 
++
++
++
++static const unsigned short gpios_out_low[] = {
++	GP_BACKLIGHT_LVDS,
++	GP_REG_USBOTG,
++	GP_USB_HUB_RESET,
++};
++
++static const unsigned short gpios_out_high[] = {
++	GP_ECSPI1_NOR_CS,
++	GP_SGTL5000_HP_MUTE,
++	GP_OV5640_MIPI_POWER_DOWN,
++};
++
++static const unsigned short gpios_in[] = {
++	GP_GPIOKEY_BACK,
++	GP_GPIOKEY_HOME,
++	GP_GPIOKEY_MENU,
++	GP_GPIOKEY_POWER,
++	GP_GPIOKEY_VOL_DOWN,
++	GP_GPIOKEY_VOL_UP,
++	GPIRQ_ENET_PHY,
++	GP_USDHC3_CD,
++	GP_USDHC4_CD,
++};
++
++static void set_gpios_in(const unsigned short *p, int cnt)
++{
++	int i;
++
++	for (i = 0; i < cnt; i++)
++		gpio_direction_input(*p++);
++}
++
++static void set_gpios(const unsigned short *p, int cnt, int val)
++{
++	int i;
++
++	for (i = 0; i < cnt; i++)
++		gpio_direction_output(*p++, val);
++}
++
++int board_eth_init(bd_t *bis)
++{
++	uint32_t base = IMX_FEC_BASE;
++	struct mii_dev *bus = NULL;
++	struct phy_device *phydev = NULL;
++	int ret;
++
++	setup_iomux_enet(0);
++
++#ifdef CONFIG_FEC_MXC
++	bus = fec_get_miibus(base, -1);
++	if (!bus)
++		return -EINVAL;
++	/* scan phy 4,5,6,7 */
++	phydev = phy_find_by_mask(bus, (0xf << 4), PHY_INTERFACE_MODE_RGMII);
++	if (!phydev) {
++		ret = -EINVAL;
++		goto free_bus;
++	}
++	printf("%s at %d\n", phydev->drv->name, phydev->addr);
++	ret  = fec_probe(bis, -1, base, bus, phydev);
++	if (ret)
++		goto free_phydev;
++#endif
++
++#ifdef CONFIG_CI_UDC
++	/* For otg ethernet*/
++	if (!getenv("eth1addr"))
++		setenv("eth1addr", getenv("usbnet_devaddr"));
++	usb_eth_initialize(bis);
++#endif
++	return 0;
++
++free_phydev:
++	free(phydev);
++free_bus:
++	free(bus);
++	return ret;
++}
++
++int board_early_init_f(void)
++{
++	set_gpios_in(gpios_in, ARRAY_SIZE(gpios_in));
++	set_gpios(gpios_out_high, ARRAY_SIZE(gpios_out_high), 1);
++	set_gpios(gpios_out_low, ARRAY_SIZE(gpios_out_low), 0);
++	SETUP_IOMUX_PADS(init_pads);
++	return 0;
++}
++
++/*
++ * Do not overwrite the console
++ * Use always serial for U-Boot console
++ */
++int overwrite_console(void)
++{
++	return 1;
++}
++
++int board_init(void)
++{
++	int i;
++	struct i2c_pads_info *p = i2c_pads + i2c_get_info_entry_offset();
++	struct iomuxc *const iomuxc_regs = (struct iomuxc *)IOMUXC_BASE_ADDR;
++
++	clrsetbits_le32(&iomuxc_regs->gpr[1],
++			IOMUXC_GPR1_OTG_ID_MASK,
++			IOMUXC_GPR1_OTG_ID_GPIO1);
++
++	/* address of boot parameters */
++	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
++	for (i = 0; i < 3; i++) {
++	        setup_i2c(i, CONFIG_SYS_I2C_SPEED, 0x7f, p);
++		p += I2C_PADS_INFO_ENTRY_SPACING;
++	}
++#ifdef CONFIG_CMD_SATA
++	setup_sata();
++#endif
++#ifdef CONFIG_CMD_FBPANEL
++	fbp_setup_display(displays, display_cnt);
++#endif
++	return 0;
++}
++
++static char const *board_type = "adk";
++
++int checkboard(void)
++{
++	puts("Board:  Adakta ADK (imx6)\n");
++	
++	return 0;
++}
++
++struct button_key {
++	char const	*name;
++	unsigned	gpnum;
++	char		ident;
++};
++
++static struct button_key const buttons[] = {
++	{"back",	GP_GPIOKEY_BACK,	'B'},
++	{"home",	GP_GPIOKEY_HOME,	'H'},
++	{"menu",	GP_GPIOKEY_MENU,	'M'},
++	{"search",	GP_GPIOKEY_POWER,	'S'},
++	{"volup",	GP_GPIOKEY_VOL_UP,	'V'},
++	{"voldown",	GP_GPIOKEY_VOL_DOWN,	'v'},
++};
++
++/*
++ * generate a null-terminated string containing the buttons pressed
++ * returns number of keys pressed
++ */
++static int read_keys(char *buf)
++{
++	int i, numpressed = 0;
++	for (i = 0; i < ARRAY_SIZE(buttons); i++) {
++		if (!gpio_get_value(buttons[i].gpnum))
++			buf[numpressed++] = buttons[i].ident;
++	}
++	buf[numpressed] = '\0';
++	return numpressed;
++}
++
++static int do_kbd(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
++{
++	char envvalue[ARRAY_SIZE(buttons)+1];
++	int numpressed = read_keys(envvalue);
++	setenv("keybd", envvalue);
++	return numpressed == 0;
++}
++
++U_BOOT_CMD(
++	kbd, 1, 1, do_kbd,
++	"Tests for keypresses, sets 'keybd' environment variable",
++	"Returns 0 (true) to shell if key is pressed."
++);
++
++#ifdef CONFIG_PREBOOT
++static char const kbd_magic_prefix[] = "key_magic";
++static char const kbd_command_prefix[] = "key_cmd";
++
++static void preboot_keys(void)
++{
++	int numpressed;
++	char keypress[ARRAY_SIZE(buttons)+1];
++	numpressed = read_keys(keypress);
++	if (numpressed) {
++		char *kbd_magic_keys = getenv("magic_keys");
++		char *suffix;
++		/*
++		 * loop over all magic keys
++		 */
++		for (suffix = kbd_magic_keys; *suffix; ++suffix) {
++			char *keys;
++			char magic[sizeof(kbd_magic_prefix) + 1];
++			sprintf(magic, "%s%c", kbd_magic_prefix, *suffix);
++			keys = getenv(magic);
++			if (keys) {
++				if (!strcmp(keys, keypress))
++					break;
++			}
++		}
++		if (*suffix) {
++			char cmd_name[sizeof(kbd_command_prefix) + 1];
++			char *cmd;
++			sprintf(cmd_name, "%s%c", kbd_command_prefix, *suffix);
++			cmd = getenv(cmd_name);
++			if (cmd) {
++				setenv("preboot", cmd);
++				return;
++			}
++		}
++	}
++}
++#endif
++
++#ifdef CONFIG_CMD_BMODE
++static const struct boot_mode board_boot_modes[] = {
++	/* 4 bit bus width */
++	{"mmc0",	MAKE_CFGVAL(0x40, 0x30, 0x00, 0x00)},
++	{"mmc1",	MAKE_CFGVAL(0x40, 0x38, 0x00, 0x00)},
++	{NULL,		0},
++};
++#endif
++
++int misc_init_r(void)
++{
++#ifdef CONFIG_PREBOOT
++	preboot_keys();
++#endif
++
++#ifdef CONFIG_CMD_BMODE
++	add_board_boot_modes(board_boot_modes);
++#endif
++	setenv_hex("reset_cause", get_imx_reset_cause());
++	return 0;
++}
++
++int board_late_init(void)
++{
++	unsigned char mac_address[8];
++	char macbuf[18];
++	int cpurev = get_cpu_rev();
++
++	setenv("cpu", get_imx_type((cpurev & 0xFF000) >> 12));
++	if (!getenv("board"))
++		setenv("board", board_type);
++	setenv("uboot_defconfig", CONFIG_DEFCONFIG);
++	if (!getenv("wlmac")) {
++		imx_get_mac_from_fuse(0x800000, mac_address);
++		if (is_valid_ethaddr(mac_address)) {
++			snprintf(macbuf, sizeof(macbuf), "%pM", mac_address);
++			setenv("wlmac", macbuf);
++		}
++	}
++	return 0;
++}
+diff --git a/board/adakta/adk/clocks.cfg b/board/adakta/adk/clocks.cfg
+new file mode 100644
+index 0000000..75a5f1e
+--- /dev/null
++++ b/board/adakta/adk/clocks.cfg
+@@ -0,0 +1,47 @@
++/*
++ * Copyright (C) 2017 Adakta
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ *
++ * Device Configuration Data (DCD)
++ *
++ * Each entry must have the format:
++ * Addr-type           Address        Value
++ *
++ * where:
++ *      Addr-type register length (1,2 or 4 bytes)
++ *      Address   absolute address of the register
++ *      value     value to be stored in the register
++ */
++
++/* set the default clock gate to save power */
++DATA 4, CCM_CCGR0, 0x00C03F3F
++DATA 4, CCM_CCGR1, 0x0030FC03
++DATA 4, CCM_CCGR2, 0x0FFFC000
++DATA 4, CCM_CCGR3, 0x3FF00000
++DATA 4, CCM_CCGR4, 0x00FFF300
++DATA 4, CCM_CCGR5, 0x0F0000C3
++DATA 4, CCM_CCGR6, 0x000003FF
++
++/* enable AXI cache for VDOA/VPU/IPU */
++DATA 4, MX6_IOMUXC_GPR4, 0xF00000CF
++#ifdef CONFIG_MX6QP
++/* set IPU AXI-id1 Qos=0x1 AXI-id0/2/3 Qos=0x7 */
++DATA 4, MX6_IOMUXC_GPR6, 0x77177717
++DATA 4, MX6_IOMUXC_GPR7, 0x77177717
++#else
++/* set IPU AXI-id0 Qos=0xf(bypass) AXI-id1 Qos=0x7 */
++DATA 4, MX6_IOMUXC_GPR6, 0x007F007F
++DATA 4, MX6_IOMUXC_GPR7, 0x007F007F
++#endif
++
++/*
++ * Setup CCM_CCOSR register as follows:
++ *
++ * cko1_en  = 1	   --> CKO1 enabled
++ * cko1_div = 111  --> divide by 8
++ * cko1_sel = 1011 --> ahb_clk_root
++ *
++ * This sets CKO1 at ahb_clk_root/8 = 132/8 = 16.5 MHz
++ */
++DATA 4, CCM_CCOSR, 0x000000fb
+diff --git a/board/adakta/adk/ddr-setup.cfg b/board/adakta/adk/ddr-setup.cfg
+new file mode 100644
+index 0000000..99d9373
+--- /dev/null
++++ b/board/adakta/adk/ddr-setup.cfg
+@@ -0,0 +1,109 @@
++/*
++ * Copyright (C) 2017 Adakta
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ *
++ * Device Configuration Data (DCD)
++ *
++ * Each entry must have the format:
++ * Addr-type           Address        Value
++ *
++ * where:
++ *      Addr-type register length (1,2 or 4 bytes)
++ *      Address   absolute address of the register
++ *      value     value to be stored in the register
++ */
++
++/*
++ * DDR3 settings
++ * MX6Q    ddr is limited to 1066 Mhz	currently 1056 MHz(528 MHz clock),
++ *	   memory bus width: 64 bits	x16/x32/x64
++ * MX6DL   ddr is limited to 800 MHz(400 MHz clock)
++ *	   memory bus width: 64 bits	x16/x32/x64
++ * MX6SOLO ddr is limited to 800 MHz(400 MHz clock)
++ *	   memory bus width: 32 bits	x16/x32
++ */
++DATA 4, MX6_IOM_DRAM_SDQS0, 0x00000030
++DATA 4, MX6_IOM_DRAM_SDQS1, 0x00000030
++DATA 4, MX6_IOM_DRAM_SDQS2, 0x00000030
++DATA 4, MX6_IOM_DRAM_SDQS3, 0x00000030
++DATA 4, MX6_IOM_DRAM_SDQS4, 0x00000030
++DATA 4, MX6_IOM_DRAM_SDQS5, 0x00000030
++DATA 4, MX6_IOM_DRAM_SDQS6, 0x00000030
++DATA 4, MX6_IOM_DRAM_SDQS7, 0x00000030
++
++DATA 4, MX6_IOM_GRP_B0DS, 0x00000030
++DATA 4, MX6_IOM_GRP_B1DS, 0x00000030
++DATA 4, MX6_IOM_GRP_B2DS, 0x00000030
++DATA 4, MX6_IOM_GRP_B3DS, 0x00000030
++DATA 4, MX6_IOM_GRP_B4DS, 0x00000030
++DATA 4, MX6_IOM_GRP_B5DS, 0x00000030
++DATA 4, MX6_IOM_GRP_B6DS, 0x00000030
++DATA 4, MX6_IOM_GRP_B7DS, 0x00000030
++DATA 4, MX6_IOM_GRP_ADDDS, 0x00000030
++/* 40 Ohm drive strength for cs0/1,sdba2,cke0/1,sdwe */
++DATA 4, MX6_IOM_GRP_CTLDS, 0x00000030
++
++DATA 4, MX6_IOM_DRAM_DQM0, 0x00020030
++DATA 4, MX6_IOM_DRAM_DQM1, 0x00020030
++DATA 4, MX6_IOM_DRAM_DQM2, 0x00020030
++DATA 4, MX6_IOM_DRAM_DQM3, 0x00020030
++DATA 4, MX6_IOM_DRAM_DQM4, 0x00020030
++DATA 4, MX6_IOM_DRAM_DQM5, 0x00020030
++DATA 4, MX6_IOM_DRAM_DQM6, 0x00020030
++DATA 4, MX6_IOM_DRAM_DQM7, 0x00020030
++
++DATA 4, MX6_IOM_DRAM_CAS, 0x00020030
++DATA 4, MX6_IOM_DRAM_RAS, 0x00020030
++DATA 4, MX6_IOM_DRAM_SDCLK_0, 0x00020030
++DATA 4, MX6_IOM_DRAM_SDCLK_1, 0x00020030
++
++DATA 4, MX6_IOM_DRAM_RESET, 0x00020030
++DATA 4, MX6_IOM_DRAM_SDCKE0, 0x00003000
++DATA 4, MX6_IOM_DRAM_SDCKE1, 0x00003000
++
++DATA 4, MX6_IOM_DRAM_SDODT0, 0x00003030
++DATA 4, MX6_IOM_DRAM_SDODT1, 0x00003030
++
++/* (differential input) */
++DATA 4, MX6_IOM_DDRMODE_CTL, 0x00020000
++/* (differential input) */
++DATA 4, MX6_IOM_GRP_DDRMODE, 0x00020000
++/* disable ddr pullups */
++DATA 4, MX6_IOM_GRP_DDRPKE, 0x00000000
++DATA 4, MX6_IOM_DRAM_SDBA2, 0x00000000
++/* 40 Ohm drive strength for cs0/1,sdba2,cke0/1,sdwe */
++DATA 4, MX6_IOM_GRP_DDR_TYPE, 0x000C0000
++
++/* Read data DQ Byte0-3 delay */
++DATA 4, MX6_MMDC_P0_MPRDDQBY0DL, 0x33333333
++DATA 4, MX6_MMDC_P0_MPRDDQBY1DL, 0x33333333
++DATA 4, MX6_MMDC_P0_MPRDDQBY2DL, 0x33333333
++DATA 4, MX6_MMDC_P0_MPRDDQBY3DL, 0x33333333
++DATA 4, MX6_MMDC_P1_MPRDDQBY0DL, 0x33333333
++DATA 4, MX6_MMDC_P1_MPRDDQBY1DL, 0x33333333
++DATA 4, MX6_MMDC_P1_MPRDDQBY2DL, 0x33333333
++DATA 4, MX6_MMDC_P1_MPRDDQBY3DL, 0x33333333
++
++/*
++ * MDMISC	mirroring-off	interleaved (row/bank/col)
++ */
++DATA 4, MX6_MMDC_P0_MDMISC, 0x00011740
++
++/*
++ * MDSCR	con_req
++ */
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00008000
++
++#ifdef CONFIG_MX6QP
++/* NoC DDR configuration register set */
++DATA 4 0x00bb0008 0x00000004
++DATA 4 0x00bb000c 0x2891E41A
++DATA 4 0x00bb0038 0x00000564
++DATA 4 0x00bb0014 0x00000040
++DATA 4 0x00bb0028 0x00000020
++DATA 4 0x00bb002c 0x00000020
++
++/* MMDCx_MAARCR - bit 26 - Disable all MMDC arbitration and reordering controls */
++DATA 4 0x021b0400 0x14420000
++#endif
+diff --git a/board/adakta/adk/imx6dl-adk.cfg b/board/adakta/adk/imx6dl-adk.cfg
+new file mode 100644
+index 0000000..630509c
+--- /dev/null
++++ b/board/adakta/adk/imx6dl-adk.cfg
+@@ -0,0 +1,32 @@
++/*
++ * Copyright (C) 2017 Adakta
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ *
++ * Refer doc/README.imximage for more details about how-to configure
++ * and create imximage boot image
++ *
++ * The syntax is taken as close as possible with the kwbimage
++ */
++
++/* image version */
++IMAGE_VERSION 2
++
++/*
++ * Boot Device : one of
++ * spi, sd (the board has no nand neither onenand)
++ */
++BOOT_FROM      spi
++
++#define __ASSEMBLY__
++#include <config.h>
++#ifdef CONFIG_SECURE_BOOT
++CSF CONFIG_CSF_SIZE
++#endif
++#include "asm/arch/mx6-ddr.h"
++#include "asm/arch/iomux.h"
++#include "asm/arch/crm_regs.h"
++
++#include "ddr-setup.cfg"
++#include "800mhz_4x128mx16.cfg"
++#include "clocks.cfg"
+diff --git a/board/adakta/adk/imx6dl2g-adk.cfg b/board/adakta/adk/imx6dl2g-adk.cfg
+new file mode 100644
+index 0000000..ef5b535
+--- /dev/null
++++ b/board/adakta/adk/imx6dl2g-adk.cfg
+@@ -0,0 +1,32 @@
++/*
++ * Copyright (C) 2017 Adakta
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ *
++ * Refer doc/README.imximage for more details about how-to configure
++ * and create imximage boot image
++ *
++ * The syntax is taken as close as possible with the kwbimage
++ */
++
++/* image version */
++IMAGE_VERSION 2
++
++/*
++ * Boot Device : one of
++ * spi, sd (the board has no nand neither onenand)
++ */
++BOOT_FROM      spi
++
++#define __ASSEMBLY__
++#include <config.h>
++#ifdef CONFIG_SECURE_BOOT
++CSF CONFIG_CSF_SIZE
++#endif
++#include "asm/arch/mx6-ddr.h"
++#include "asm/arch/iomux.h"
++#include "asm/arch/crm_regs.h"
++
++#include "ddr-setup.cfg"
++#include "800mhz_4x256mx16.cfg"
++#include "clocks.cfg"
+diff --git a/board/adakta/adk/imx6q-adk.cfg b/board/adakta/adk/imx6q-adk.cfg
+new file mode 100644
+index 0000000..8833483
+--- /dev/null
++++ b/board/adakta/adk/imx6q-adk.cfg
+@@ -0,0 +1,32 @@
++/*
++ * Copyright (C) 2017 Adakta
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ *
++ * Refer doc/README.imximage for more details about how-to configure
++ * and create imximage boot image
++ *
++ * The syntax is taken as close as possible with the kwbimage
++ */
++
++/* image version */
++IMAGE_VERSION 2
++ 
++/*
++ * Boot Device : one of
++ * spi, sd (the board has no nand neither onenand)
++ */
++BOOT_FROM      spi
++
++#define __ASSEMBLY__
++#include <config.h>
++#ifdef CONFIG_SECURE_BOOT
++CSF CONFIG_CSF_SIZE
++#endif
++#include "asm/arch/mx6-ddr.h"
++#include "asm/arch/iomux.h"
++#include "asm/arch/crm_regs.h"
++
++#include "ddr-setup.cfg"
++#include "1066mhz_4x128mx16.cfg"
++#include "clocks.cfg"
+diff --git a/board/adakta/adk/imx6q2g-adk.cfg b/board/adakta/adk/imx6q2g-adk.cfg
+new file mode 100644
+index 0000000..72dfd30
+--- /dev/null
++++ b/board/adakta/adk/imx6q2g-adk.cfg
+@@ -0,0 +1,32 @@
++/*
++ * Copyright (C) 2017 Adakta
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ *
++ * Refer doc/README.imximage for more details about how-to configure
++ * and create imximage boot image
++ *
++ * The syntax is taken as close as possible with the kwbimage
++ */
++
++/* image version */
++IMAGE_VERSION 2
++
++/*
++ * Boot Device : one of
++ * spi, sd (the board has no nand neither onenand)
++ */
++BOOT_FROM      spi
++
++#define __ASSEMBLY__
++#include <config.h>
++#ifdef CONFIG_SECURE_BOOT
++CSF CONFIG_CSF_SIZE
++#endif
++#include "asm/arch/mx6-ddr.h"
++#include "asm/arch/iomux.h"
++#include "asm/arch/crm_regs.h"
++
++#include "ddr-setup.cfg"
++#include "1066mhz_4x256mx16.cfg"
++#include "clocks.cfg"
+diff --git a/board/adakta/adk/imx6s-adk.cfg b/board/adakta/adk/imx6s-adk.cfg
+new file mode 100644
+index 0000000..51e6bac
+--- /dev/null
++++ b/board/adakta/adk/imx6s-adk.cfg
+@@ -0,0 +1,32 @@
++/*
++ * Copyright (C) 2017 Adakta
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ *
++ * Refer doc/README.imximage for more details about how-to configure
++ * and create imximage boot image
++ *
++ * The syntax is taken as close as possible with the kwbimage
++ */
++
++/* image version */
++IMAGE_VERSION 2
++
++/*
++ * Boot Device : one of
++ * spi, sd (the board has no nand neither onenand)
++ */
++BOOT_FROM      spi
++
++#define __ASSEMBLY__
++#include <config.h>
++#ifdef CONFIG_SECURE_BOOT
++CSF CONFIG_CSF_SIZE
++#endif
++#include "asm/arch/mx6-ddr.h"
++#include "asm/arch/iomux.h"
++#include "asm/arch/crm_regs.h"
++
++#include "ddr-setup.cfg"
++#include "800mhz_2x128mx16.cfg"
++#include "clocks.cfg"
+diff --git a/board/adakta/adk/imx6s1g-adk.cfg b/board/adakta/adk/imx6s1g-adk.cfg
+new file mode 100644
+index 0000000..eeeb937
+--- /dev/null
++++ b/board/adakta/adk/imx6s1g-adk.cfg
+@@ -0,0 +1,32 @@
++/*
++ * Copyright (C) 2017 Adakta
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ *
++ * Refer doc/README.imximage for more details about how-to configure
++ * and create imximage boot image
++ *
++ * The syntax is taken as close as possible with the kwbimage
++ */
++
++/* image version */
++IMAGE_VERSION 2
++
++/*
++ * Boot Device : one of
++ * spi, sd (the board has no nand neither onenand)
++ */
++BOOT_FROM      spi
++
++#define __ASSEMBLY__
++#include <config.h>
++#ifdef CONFIG_SECURE_BOOT
++CSF CONFIG_CSF_SIZE
++#endif
++#include "asm/arch/mx6-ddr.h"
++#include "asm/arch/iomux.h"
++#include "asm/arch/crm_regs.h"
++
++#include "ddr-setup.cfg"
++#include "800mhz_2x256mx16.cfg"
++#include "clocks.cfg"
+diff --git a/configs/imx6dl-adk_defconfig b/configs/imx6dl-adk_defconfig
+new file mode 100644
+index 0000000..1b3255c
+--- /dev/null
++++ b/configs/imx6dl-adk_defconfig
+@@ -0,0 +1,50 @@
++CONFIG_ARM=y
++CONFIG_ARCH_MX6=y
++CONFIG_TARGET_ADK=y
++CONFIG_VIDEO=y
++CONFIG_CMD_HDMIDETECT=y
++CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=board/adakta/adk/imx6dl-adk.cfg,MX6DL,DDR_MB=1024,DEFCONFIG=\"imx6dl-adk\""
++CONFIG_BOOTDELAY=3
++CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE=y
++# CONFIG_SYS_STDIO_DEREGISTER is not set
++CONFIG_BOARD_EARLY_INIT_F=y
++CONFIG_HUSH_PARSER=y
++CONFIG_CMD_BOOTZ=y
++# CONFIG_CMD_IMLS is not set
++CONFIG_CMD_MEMTEST=y
++# CONFIG_CMD_FLASH is not set
++CONFIG_CMD_MMC=y
++CONFIG_CMD_SF=y
++CONFIG_CMD_I2C=y
++CONFIG_CMD_USB=y
++CONFIG_CMD_USB_MASS_STORAGE=y
++CONFIG_CMD_GPIO=y
++CONFIG_CMD_DHCP=y
++CONFIG_CMD_MII=y
++CONFIG_CMD_PING=y
++CONFIG_CMD_BMP=y
++CONFIG_CMD_CACHE=y
++CONFIG_CMD_TIME=y
++CONFIG_CMD_EXT2=y
++CONFIG_CMD_EXT4=y
++CONFIG_CMD_EXT4_WRITE=y
++CONFIG_CMD_FAT=y
++CONFIG_CMD_FS_GENERIC=y
++CONFIG_EFI_PARTITION=y
++CONFIG_PARTITION_TYPE_GUID=y
++CONFIG_BLOCK_CACHE=y
++CONFIG_SPI_FLASH=y
++CONFIG_SPI_FLASH_SPANSION=y
++CONFIG_SPI_FLASH_SST=y
++CONFIG_USB=y
++CONFIG_USB_STORAGE=y
++CONFIG_USB_KEYBOARD=y
++CONFIG_USB_GADGET=y
++CONFIG_CI_UDC=y
++CONFIG_USB_GADGET_DOWNLOAD=y
++CONFIG_G_DNL_MANUFACTURER="Adakta"
++CONFIG_G_DNL_VENDOR_NUM=0x0000
++CONFIG_G_DNL_PRODUCT_NUM=0x0000
++# CONFIG_VIDEO_SW_CURSOR is not set
++CONFIG_OF_LIBFDT=y
++
+diff --git a/configs/imx6dl2g-adk_defconfig b/configs/imx6dl2g-adk_defconfig
+new file mode 100644
+index 0000000..2bdff0e
+--- /dev/null
++++ b/configs/imx6dl2g-adk_defconfig
+@@ -0,0 +1,50 @@
++CONFIG_ARM=y
++CONFIG_ARCH_MX6=y
++CONFIG_TARGET_ADK=y
++CONFIG_VIDEO=y
++CONFIG_CMD_HDMIDETECT=y
++CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=board/adakta/adk/imx6dl2g-adk.cfg,MX6DL,DDR_MB=2048,DEFCONFIG=\"adk6dl2g-adk\""
++CONFIG_BOOTDELAY=3
++CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE=y
++# CONFIG_SYS_STDIO_DEREGISTER is not set
++CONFIG_BOARD_EARLY_INIT_F=y
++CONFIG_HUSH_PARSER=y
++CONFIG_CMD_BOOTZ=y
++# CONFIG_CMD_IMLS is not set
++CONFIG_CMD_MEMTEST=y
++# CONFIG_CMD_FLASH is not set
++CONFIG_CMD_MMC=y
++CONFIG_CMD_SF=y
++CONFIG_CMD_I2C=y
++CONFIG_CMD_USB=y
++CONFIG_CMD_USB_MASS_STORAGE=y
++CONFIG_CMD_GPIO=y
++CONFIG_CMD_DHCP=y
++CONFIG_CMD_MII=y
++CONFIG_CMD_PING=y
++CONFIG_CMD_BMP=y
++CONFIG_CMD_CACHE=y
++CONFIG_CMD_TIME=y
++CONFIG_CMD_EXT2=y
++CONFIG_CMD_EXT4=y
++CONFIG_CMD_EXT4_WRITE=y
++CONFIG_CMD_FAT=y
++CONFIG_CMD_FS_GENERIC=y
++CONFIG_EFI_PARTITION=y
++CONFIG_PARTITION_TYPE_GUID=y
++CONFIG_BLOCK_CACHE=y
++CONFIG_SPI_FLASH=y
++CONFIG_SPI_FLASH_SPANSION=y
++CONFIG_SPI_FLASH_SST=y
++CONFIG_USB=y
++CONFIG_USB_STORAGE=y
++CONFIG_USB_KEYBOARD=y
++CONFIG_USB_GADGET=y
++CONFIG_CI_UDC=y
++CONFIG_USB_GADGET_DOWNLOAD=y
++CONFIG_G_DNL_MANUFACTURER="Adakta"
++CONFIG_G_DNL_VENDOR_NUM=0x0000
++CONFIG_G_DNL_PRODUCT_NUM=0x0000
++# CONFIG_VIDEO_SW_CURSOR is not set
++CONFIG_OF_LIBFDT=y
++
+diff --git a/configs/imx6q-adk_defconfig b/configs/imx6q-adk_defconfig
+new file mode 100644
+index 0000000..5cdf59f
+--- /dev/null
++++ b/configs/imx6q-adk_defconfig
+@@ -0,0 +1,49 @@
++CONFIG_ARM=y
++CONFIG_ARCH_MX6=y
++CONFIG_TARGET_ADK=y
++CONFIG_VIDEO=y
++CONFIG_CMD_HDMIDETECT=y
++CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=board/adakta/adk/imx6q-adk.cfg,MX6Q,DDR_MB=1024,DEFCONFIG=\"imx6q-adk\""
++CONFIG_BOOTDELAY=3
++CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE=y
++# CONFIG_SYS_STDIO_DEREGISTER is not set
++CONFIG_BOARD_EARLY_INIT_F=y
++CONFIG_HUSH_PARSER=y
++CONFIG_CMD_BOOTZ=y
++# CONFIG_CMD_IMLS is not set
++CONFIG_CMD_MEMTEST=y
++# CONFIG_CMD_FLASH is not set
++CONFIG_CMD_MMC=y
++CONFIG_CMD_SF=y
++CONFIG_CMD_I2C=y
++CONFIG_CMD_USB=y
++CONFIG_CMD_USB_MASS_STORAGE=y
++CONFIG_CMD_GPIO=y
++CONFIG_CMD_DHCP=y
++CONFIG_CMD_MII=y
++CONFIG_CMD_PING=y
++CONFIG_CMD_BMP=y
++CONFIG_CMD_CACHE=y
++CONFIG_CMD_TIME=y
++CONFIG_CMD_EXT2=y
++CONFIG_CMD_EXT4=y
++CONFIG_CMD_EXT4_WRITE=y
++CONFIG_CMD_FAT=y
++CONFIG_CMD_FS_GENERIC=y
++CONFIG_EFI_PARTITION=y
++CONFIG_PARTITION_TYPE_GUID=y
++CONFIG_BLOCK_CACHE=y
++CONFIG_SPI_FLASH=y
++CONFIG_SPI_FLASH_SPANSION=y
++CONFIG_SPI_FLASH_SST=y
++CONFIG_USB=y
++CONFIG_USB_STORAGE=y
++CONFIG_USB_KEYBOARD=y
++CONFIG_USB_GADGET=y
++CONFIG_CI_UDC=y
++CONFIG_USB_GADGET_DOWNLOAD=y
++CONFIG_G_DNL_MANUFACTURER="Adakta"
++CONFIG_G_DNL_VENDOR_NUM=0x0000
++CONFIG_G_DNL_PRODUCT_NUM=0x0000
++# CONFIG_VIDEO_SW_CURSOR is not set
++CONFIG_OF_LIBFDT=y
+diff --git a/configs/imx6q2g-adk_defconfig b/configs/imx6q2g-adk_defconfig
+new file mode 100644
+index 0000000..a55bfbd
+--- /dev/null
++++ b/configs/imx6q2g-adk_defconfig
+@@ -0,0 +1,49 @@
++CONFIG_ARM=y
++CONFIG_ARCH_MX6=y
++CONFIG_TARGET_ADK=y
++CONFIG_VIDEO=y
++CONFIG_CMD_HDMIDETECT=y
++CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=board/adakta/adk/imx6q2g-adk.cfg,MX6Q,DDR_MB=2048,DEFCONFIG=\"imx6q2g-adk\""
++CONFIG_BOOTDELAY=3
++CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE=y
++# CONFIG_SYS_STDIO_DEREGISTER is not set
++CONFIG_BOARD_EARLY_INIT_F=y
++CONFIG_HUSH_PARSER=y
++CONFIG_CMD_BOOTZ=y
++# CONFIG_CMD_IMLS is not set
++CONFIG_CMD_MEMTEST=y
++# CONFIG_CMD_FLASH is not set
++CONFIG_CMD_MMC=y
++CONFIG_CMD_SF=y
++CONFIG_CMD_I2C=y
++CONFIG_CMD_USB=y
++CONFIG_CMD_USB_MASS_STORAGE=y
++CONFIG_CMD_GPIO=y
++CONFIG_CMD_DHCP=y
++CONFIG_CMD_MII=y
++CONFIG_CMD_PING=y
++CONFIG_CMD_BMP=y
++CONFIG_CMD_CACHE=y
++CONFIG_CMD_TIME=y
++CONFIG_CMD_EXT2=y
++CONFIG_CMD_EXT4=y
++CONFIG_CMD_EXT4_WRITE=y
++CONFIG_CMD_FAT=y
++CONFIG_CMD_FS_GENERIC=y
++CONFIG_EFI_PARTITION=y
++CONFIG_PARTITION_TYPE_GUID=y
++CONFIG_BLOCK_CACHE=y
++CONFIG_SPI_FLASH=y
++CONFIG_SPI_FLASH_SPANSION=y
++CONFIG_SPI_FLASH_SST=y
++CONFIG_USB=y
++CONFIG_USB_STORAGE=y
++CONFIG_USB_KEYBOARD=y
++CONFIG_USB_GADGET=y
++CONFIG_CI_UDC=y
++CONFIG_USB_GADGET_DOWNLOAD=y
++CONFIG_G_DNL_MANUFACTURER="Adakta"
++CONFIG_G_DNL_VENDOR_NUM=0x0000
++CONFIG_G_DNL_PRODUCT_NUM=0x0000
++# CONFIG_VIDEO_SW_CURSOR is not set
++CONFIG_OF_LIBFDT=y
+diff --git a/configs/imx6s-adk_defconfig b/configs/imx6s-adk_defconfig
+new file mode 100644
+index 0000000..a3526da
+--- /dev/null
++++ b/configs/imx6s-adk_defconfig
+@@ -0,0 +1,49 @@
++CONFIG_ARM=y
++CONFIG_ARCH_MX6=y
++CONFIG_TARGET_ADK=y
++CONFIG_VIDEO=y
++CONFIG_CMD_HDMIDETECT=y
++CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=board/adakta/adk/imx6s-adk.cfg,MX6S,DDR_MB=512,DEFCONFIG=\"imx6s-adk\""
++CONFIG_BOOTDELAY=3
++CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE=y
++# CONFIG_SYS_STDIO_DEREGISTER is not set
++CONFIG_BOARD_EARLY_INIT_F=y
++CONFIG_HUSH_PARSER=y
++CONFIG_CMD_BOOTZ=y
++# CONFIG_CMD_IMLS is not set
++CONFIG_CMD_MEMTEST=y
++# CONFIG_CMD_FLASH is not set
++CONFIG_CMD_MMC=y
++CONFIG_CMD_SF=y
++CONFIG_CMD_I2C=y
++CONFIG_CMD_USB=y
++CONFIG_CMD_USB_MASS_STORAGE=y
++CONFIG_CMD_GPIO=y
++CONFIG_CMD_DHCP=y
++CONFIG_CMD_MII=y
++CONFIG_CMD_PING=y
++CONFIG_CMD_BMP=y
++CONFIG_CMD_CACHE=y
++CONFIG_CMD_TIME=y
++CONFIG_CMD_EXT2=y
++CONFIG_CMD_EXT4=y
++CONFIG_CMD_EXT4_WRITE=y
++CONFIG_CMD_FAT=y
++CONFIG_CMD_FS_GENERIC=y
++CONFIG_EFI_PARTITION=y
++CONFIG_PARTITION_TYPE_GUID=y
++CONFIG_BLOCK_CACHE=y
++CONFIG_SPI_FLASH=y
++CONFIG_SPI_FLASH_SPANSION=y
++CONFIG_SPI_FLASH_SST=y
++CONFIG_USB=y
++CONFIG_USB_STORAGE=y
++CONFIG_USB_KEYBOARD=y
++CONFIG_USB_GADGET=y
++CONFIG_CI_UDC=y
++CONFIG_USB_GADGET_DOWNLOAD=y
++CONFIG_G_DNL_MANUFACTURER="Adakta"
++CONFIG_G_DNL_VENDOR_NUM=0x0000
++CONFIG_G_DNL_PRODUCT_NUM=0x0000
++# CONFIG_VIDEO_SW_CURSOR is not set
++CONFIG_OF_LIBFDT=y
+diff --git a/configs/imx6s1g-adk_defconfig b/configs/imx6s1g-adk_defconfig
+new file mode 100644
+index 0000000..6b53a83
+--- /dev/null
++++ b/configs/imx6s1g-adk_defconfig
+@@ -0,0 +1,50 @@
++CONFIG_ARM=y
++CONFIG_ARCH_MX6=y
++CONFIG_TARGET_ADK=y
++CONFIG_VIDEO=y
++CONFIG_CMD_HDMIDETECT=y
++CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=board/adakta/adk/imx6s1g-adk.cfg,MX6S,DDR_MB=1024,DEFCONFIG=\"imx6s1g-adk\""
++CONFIG_BOOTDELAY=3
++CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE=y
++# CONFIG_SYS_STDIO_DEREGISTER is not set
++CONFIG_BOARD_EARLY_INIT_F=y
++CONFIG_HUSH_PARSER=y
++CONFIG_CMD_BOOTZ=y
++# CONFIG_CMD_IMLS is not set
++CONFIG_CMD_MEMTEST=y
++# CONFIG_CMD_FLASH is not set
++CONFIG_CMD_MMC=y
++CONFIG_CMD_SF=y
++CONFIG_CMD_I2C=y
++CONFIG_CMD_USB=y
++CONFIG_CMD_USB_MASS_STORAGE=y
++CONFIG_CMD_GPIO=y
++CONFIG_CMD_DHCP=y
++CONFIG_CMD_MII=y
++CONFIG_CMD_PING=y
++CONFIG_CMD_BMP=y
++CONFIG_CMD_CACHE=y
++CONFIG_CMD_TIME=y
++CONFIG_CMD_EXT2=y
++CONFIG_CMD_EXT4=y
++CONFIG_CMD_EXT4_WRITE=y
++CONFIG_CMD_FAT=y
++CONFIG_CMD_FS_GENERIC=y
++CONFIG_EFI_PARTITION=y
++CONFIG_PARTITION_TYPE_GUID=y
++CONFIG_BLOCK_CACHE=y
++CONFIG_SPI_FLASH=y
++CONFIG_SPI_FLASH_SPANSION=y
++CONFIG_SPI_FLASH_SST=y
++CONFIG_USB=y
++CONFIG_USB_STORAGE=y
++CONFIG_USB_KEYBOARD=y
++CONFIG_USB_GADGET=y
++CONFIG_CI_UDC=y
++CONFIG_USB_GADGET_DOWNLOAD=y
++CONFIG_G_DNL_MANUFACTURER="Adakta"
++CONFIG_G_DNL_VENDOR_NUM=0x0000
++CONFIG_G_DNL_PRODUCT_NUM=0x0000
++# CONFIG_VIDEO_SW_CURSOR is not set
++CONFIG_OF_LIBFDT=y
++
+diff --git a/include/configs/adk.h b/include/configs/adk.h
+new file mode 100644
+index 0000000..2aead30
+--- /dev/null
++++ b/include/configs/adk.h
+@@ -0,0 +1,457 @@
++/*
++ * Copyright (C) 2010-2011 Freescale Semiconductor, Inc.
++ *
++ * Configuration settings for the Adakta ADK
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */ 
++
++#ifndef __CONFIG_H
++#define __CONFIG_H
++
++#include "mx6_common.h"
++#ifndef CONFIG_BOARD_TYPE
++#undef CONFIG_SYS_BOARD
++#endif
++
++#define CONFIG_MACH_TYPE	3769
++
++#ifdef CONFIG_MX6Q
++#define CONFIG_CMD_SATA
++#endif
++
++#define CONFIG_IMX_HDMI
++#define CONFIG_PHY_MICREL_KSZ9031
++
++
++#define CONFIG_SYS_FSL_USDHC_NUM	2
++#define CONFIG_USB_MAX_CONTROLLER_COUNT 2
++
++#define I2C_MASK	7
++
++
++
++#ifdef CONFIG_BOARD_TYPE
++#undef CONFIG_SYS_BOARD
++#define CONFIG_SYS_BOARD CONFIG_BOARD_TYPE
++#endif
++#include <config_distro_defaults.h>
++
++#define CONFIG_MISC_INIT_R
++#define CONFIG_BOARD_LATE_INIT
++
++#ifndef CONFIG_SYS_MALLOC_LEN
++/* Size of malloc() pool */
++#define CONFIG_SYS_MALLOC_LEN		(12 * 1024 * 1024)
++#endif
++
++#define CONFIG_MXC_UART
++#ifndef CONFIG_MXC_UART_BASE
++#define CONFIG_MXC_UART_BASE		UART2_BASE
++#endif
++
++/* Secure boot (HAB) support */
++#ifdef CONFIG_SECURE_BOOT
++#define CONFIG_CSF_SIZE			0x2000
++#define CONFIG_SYS_FSL_SEC_COMPAT	4
++#define CONFIG_CMD_DEKBLOB
++#endif
++
++/* SPL magic */
++#ifdef CONFIG_SPL
++#define CONFIG_SPL_FRAMEWORK
++#define CONFIG_SPL_TEXT_BASE		0x00908400
++#define CONFIG_SPL_PAD_TO 0x400
++#define CONFIG_SPL_START_S_PATH		"arch/arm/cpu/armv7"
++#define CONFIG_SPL_STACK		0x0091FFB8
++
++#define CONFIG_SPL_LIBCOMMON_SUPPORT
++#define CONFIG_SPL_LIBGENERIC_SUPPORT
++#define CONFIG_SPL_SERIAL_SUPPORT
++#define CONFIG_SPL_USB
++#define CONFIG_SPL_WATCHDOG_SUPPORT
++#define CONFIG_SPL_GPIO_SUPPORT
++
++/* SPI flash. */
++#define CONFIG_SPL_SPI_SUPPORT
++#define CONFIG_SPL_SPI_FLASH_SUPPORT
++#define CONFIG_SPL_SPI_LOAD
++#define CONFIG_SPL_SPI_BUS		0
++#define CONFIG_SPL_SPI_CS		0
++#define CONFIG_SYS_SPI_U_BOOT_OFFS	0x20000
++
++#define CONFIG_SPL_BOARD_INIT
++#define CONFIG_SYS_SPL_MALLOC_START	0x00916000
++#define CONFIG_SYS_SPL_MALLOC_SIZE	0x2000
++#endif
++
++/* I2C Configs */
++#ifdef I2C_MASK
++#define CONFIG_SYS_I2C
++#define CONFIG_SYS_I2C_MXC
++#if (I2C_MASK & 1)
++#define CONFIG_SYS_I2C_MXC_I2C1
++#endif
++#if (I2C_MASK & 2)
++#define CONFIG_SYS_I2C_MXC_I2C2
++#endif
++#if (I2C_MASK & 4)
++#define CONFIG_SYS_I2C_MXC_I2C3
++#endif
++
++#define CONFIG_SYS_I2C_SPEED		100000
++#define CONFIG_I2C_EDID
++#endif
++
++/* MMC Configs */
++#ifdef CONFIG_SYS_FSL_USDHC_NUM
++#define CONFIG_SYS_FSL_ESDHC_ADDR	0
++#endif
++
++#ifdef CONFIG_CMD_SF
++#ifndef CONFIG_FSL_QSPI
++#define CONFIG_MXC_SPI
++#endif
++#define CONFIG_SF_DEFAULT_BUS  0
++#ifndef CONFIG_SF_DEFAULT_CS
++#define CONFIG_SF_DEFAULT_CS   0
++#endif
++#define CONFIG_SF_DEFAULT_SPEED 25000000
++#define CONFIG_SF_DEFAULT_MODE (SPI_MODE_0)
++#endif
++
++
++
++#ifdef CONFIG_PHY_MICREL_KSZ9031
++#define CONFIG_PHYLIB
++#define CONFIG_FEC_MXC
++#define CONFIG_PHY_MICREL
++
++#ifndef CONFIG_FEC_MXC_PHYADDR
++#define CONFIG_FEC_MXC_PHYADDR		6
++#endif
++
++#define CONFIG_MII
++
++#ifndef IMX_FEC_BASE
++#define IMX_FEC_BASE			ENET_BASE_ADDR
++#endif
++
++#define CONFIG_FEC_XCV_TYPE		RGMII
++#define CONFIG_ETHPRIME			"FEC"
++
++#endif
++
++/*
++ * SATA Configs
++ */
++#ifdef CONFIG_CMD_SATA
++#define CONFIG_DWC_AHSATA
++#define CONFIG_SYS_SATA_MAX_DEVICE	1
++#define CONFIG_DWC_AHSATA_PORT_ID	0
++#define CONFIG_DWC_AHSATA_BASE_ADDR	SATA_ARB_BASE_ADDR
++#define CONFIG_LBA48
++#define CONFIG_LIBATA
++#endif
++
++/* USB gadget support */
++#ifdef CONFIG_CI_UDC
++#define CONFIG_USBD_HS
++#define CONFIG_USB_ETHER
++#define CONFIG_USB_ETH_CDC
++#define CONFIG_NETCONSOLE
++#endif
++
++/* USB Configs */
++#ifdef CONFIG_USB_MAX_CONTROLLER_COUNT
++#define CONFIG_USB_HOST_ETHER
++#define CONFIG_USB_ETHER_ASIX
++#define CONFIG_USB_ETHER_MCS7830
++#define CONFIG_USB_ETHER_SMSC95XX
++#define CONFIG_EHCI_HCD_INIT_AFTER_RESET	/* For OTG port */
++#ifndef CONFIG_MXC_USB_PORTSC
++#define CONFIG_MXC_USB_PORTSC	(PORT_PTS_UTMI | PORT_PTS_PTW)
++#endif
++#ifndef CONFIG_MXC_USB_FLAGS
++#define CONFIG_MXC_USB_FLAGS	0
++#endif
++#define CONFIG_SYS_USB_EVENT_POLL_VIA_CONTROL_EP
++#endif
++
++/* Framebuffer and LCD */
++#ifdef CONFIG_VIDEO
++#define CONFIG_VIDEO_BMP_RLE8
++#define CONFIG_SPLASH_SCREEN
++#define CONFIG_SPLASH_SCREEN_ALIGN
++#define CONFIG_VIDEO_BMP_GZIP
++#define CONFIG_SYS_VIDEO_LOGO_MAX_SIZE (6 * 1024 * 1024)
++#define CONFIG_BMP_16BPP
++#define CONFIG_CMD_FBPANEL
++
++#define CONFIG_VIDEO_IPUV3
++#define CONFIG_IPUV3_CLK 264000000
++#endif
++
++#ifndef CONFIG_PREBOOT
++#define CONFIG_PREBOOT                 ""
++#endif
++
++#ifdef CONFIG_CMD_SATA
++#define DISTRO_BOOT_DEV_SATA(func) func(SATA, sata, 0)
++#else
++#define DISTRO_BOOT_DEV_SATA(func)
++#endif
++
++#ifdef CONFIG_CMD_MMC
++#if (CONFIG_SYS_FSL_USDHC_NUM == 1)
++#define DISTRO_BOOT_DEV_MMC(func) func(MMC, mmc, 0)
++#elif (CONFIG_SYS_FSL_USDHC_NUM == 2)
++#define DISTRO_BOOT_DEV_MMC(func) func(MMC, mmc, 0) func(MMC, mmc, 1)
++#else
++#define DISTRO_BOOT_DEV_MMC(func) func(MMC, mmc, 0) func(MMC, mmc, 1) func(MMC, mmc, 2)
++#endif
++#else
++#define DISTRO_BOOT_DEV_MMC(func)
++#endif
++
++#ifndef FASTBOOT_FLASH_MMC_DEV
++#if (CONFIG_SYS_FSL_USDHC_NUM == 1)
++#define FASTBOOT_FLASH_MMC_DEV   0
++#elif (CONFIG_SYS_FSL_USDHC_NUM == 2)
++#define FASTBOOT_FLASH_MMC_DEV   1
++#else
++#define FASTBOOT_FLASH_MMC_DEV   2
++#endif
++#endif
++
++#ifdef CONFIG_USB_STORAGE
++#define DISTRO_BOOT_DEV_USB(func) func(USB, usb, 0)
++#else
++#define DISTRO_BOOT_DEV_USB(func)
++#endif
++
++#ifndef CONSOLE
++#if CONFIG_MXC_UART_BASE == UART2_BASE
++#define CONSOLE	"ttymxc1"
++#elif CONFIG_MXC_UART_BASE == UART1_BASE
++#define CONSOLE	"ttymxc0"
++#endif
++#endif
++
++#if defined(CONFIG_VIDEO) && !defined(NOVIDEO_CONSOLE)
++#define STDOUT_SERIAL	"setenv stdout serial;"
++#define STDOUT_VIDEO		"setenv stdout serial,vga; "
++#define STDIN_USBKBD		"setenv stdin serial,usbkbd;"
++#else
++#define STDOUT_SERIAL
++#define STDOUT_VIDEO
++#define STDIN_USBKBD
++#endif
++
++#ifndef SPLASH_FLASH
++#define SPLASH_FLASH	"c2000"
++#endif
++
++
++#define RAM_BASE	0x10000000
++#define RAM_SCRIPT	"10008000"
++#define RAM_KERNEL	"10800000"
++#define RAM_RAMDISK	"12800000"
++#define RAM_FDT	"13000000"
++
++
++#ifndef SKIP_FUSES
++#ifndef FUSE1
++
++#if defined(CONFIG_MX6Q) || defined(CONFIG_MX6S) || defined(CONFIG_MX6DL)
++#define FUSE1		"0 5"
++#define FUSE1_VAL		"18000030"	/* CS1 */
++#define FUSE2		"0 6"
++#define FUSE2_VAL		"00000010"
++#endif
++#endif
++
++#ifndef FUSE_MAC1A
++
++#define FUSE_MAC1A		"4 3"
++#define FUSE_MAC1A_VAL	"00000019"
++#define FUSE_MAC1B		"4 2"
++
++#endif
++#endif
++
++#ifdef FUSE1
++#define FUSE1_STR		"fuse1=" FUSE1 "\0"
++#define FUSE1_VAL_STR	"fuse1_val=" FUSE1_VAL "\0"
++#else
++#define FUSE1_STR		""
++#define FUSE1_VAL_STR	""
++#endif
++
++#ifdef FUSE2
++#define FUSE2_STR		"fuse2=" FUSE2 "\0"
++#define FUSE2_VAL_STR	"fuse2_val=" FUSE2_VAL "\0"
++#else
++#define FUSE2_STR		""
++#define FUSE2_VAL_STR	""
++#endif
++
++#ifdef FUSE_MAC1A
++#define FUSE_MAC1A_STR	"fuse_mac1a=" FUSE_MAC1A "\0"
++#define FUSE_MAC1A_VAL_STR	"fuse_mac1a_val=" FUSE_MAC1A_VAL "\0"
++#define FUSE_MAC1B_STR	"fuse_mac1b=" FUSE_MAC1B "\0"
++#else
++#define FUSE_MAC1A_STR	""
++#define FUSE_MAC1A_VAL_STR	""
++#define FUSE_MAC1B_STR	""
++#endif
++
++#ifndef BOOT_TARGET_DEVICES
++#define BOOT_TARGET_DEVICES(func) \
++	DISTRO_BOOT_DEV_MMC(func) \
++	DISTRO_BOOT_DEV_SATA(func) \
++	DISTRO_BOOT_DEV_USB(func)
++#endif
++
++#define BOOTENV_EXTRA_BOOT_SCRIPTS " 6x_bootscript "
++
++#include <config_distro_bootcmd.h>
++
++#ifdef LOG_LEVEL
++#define LOG_LEVEL_STR "loglevel=" LOG_LEVEL "\0"
++#else
++#define LOG_LEVEL_STR ""
++#endif
++
++#ifdef CMA
++#define LOG_CMA_STR "cma=" CMA "\0"
++#else
++#define LOG_CMA_STR ""
++#endif
++
++#define ENV_SETTINGS \
++	"clearenv=if sf probe || sf probe ; then " \
++		"sf erase 0xc0000 0x2000 && " \
++		"echo restored environment to factory default ; fi\0" \
++	LOG_CMA_STR \
++	"console=" CONSOLE "\0" \
++	"dfu_alt_info=u-boot raw 0x0 0xc0000\0" \
++	"fdt_addr=" RAM_FDT "\0" \
++	"fdt_high=0xffffffff\0" \
++	FUSE1_STR \
++	FUSE1_VAL_STR \
++	FUSE2_STR \
++	FUSE2_VAL_STR \
++	FUSE_MAC1A_STR \
++	FUSE_MAC1A_VAL_STR \
++	FUSE_MAC1B_STR \
++	"initrd_high=0xffffffff\0" \
++	"loadsplash=if sf probe ; then sf read ${splashimage} ${splashflash} ${splashsize} ; fi\0" \
++	LOG_LEVEL_STR \
++	"net_fuses=dhcp " RAM_SCRIPT " prog_fuses.scr && source " RAM_SCRIPT "\0" \
++	"net_program=next=prog_fuses.scr; run net_upgradeu\0" \
++	"net_upgradeu=dhcp " RAM_SCRIPT " net_upgradeu.scr && source " RAM_SCRIPT "\0" \
++	"rundfu=dfu 0 sf 0:0:25000000:0\0" \
++	"otg_fuses=run usbnetwork; tftp " RAM_SCRIPT " prog_fuses.scr && source " RAM_SCRIPT "\0" \
++	"otg_program=next=prog_fuses.scr; run otg_upgradeu\0" \
++	"otg_upgradeu=run usbnetwork; tftp " RAM_SCRIPT " net_upgradeu.scr && source " RAM_SCRIPT "\0" \
++	"program=next=prog_fuses.scr; run upgradeu\0" \
++	"scriptaddr=" RAM_SCRIPT "\0" \
++	"splashflash=" SPLASH_FLASH "\0" \
++	"uboot_defconfig=" CONFIG_DEFCONFIG "\0" \
++	"upgradeu=setenv boot_scripts upgrade.scr; boot\0" \
++	"usb_pgood_delay=2000\0" \
++	"usbnet_devaddr=00:19:b8:00:00:02\0" \
++	"usbnet_hostaddr=00:19:b8:00:00:01\0" \
++	"usbnetwork=setenv ethact usb_ether; " \
++		"setenv ipaddr 10.0.0.2; " \
++		"setenv netmask 255.255.255.0; " \
++		"setenv serverip 10.0.0.1;\0" \
++	"usbrecover=run usbnetwork;" \
++		"setenv bootargs console=${console},115200; " \
++		"tftpboot " RAM_KERNEL " 10.0.0.1:uImage-${board}-recovery && " \
++		"tftpboot " RAM_RAMDISK " 10.0.0.1:uramdisk-${board}-recovery.img && " \
++		"bootm " RAM_KERNEL " " RAM_RAMDISK "\0" \
++	BOOTENV
++
++/* Miscellaneous configurable options */
++#define CONFIG_SYS_MEMTEST_START       RAM_BASE
++#define CONFIG_SYS_MEMTEST_END	       (RAM_BASE + 0x00010000)
++#define CONFIG_SYS_MEMTEST_SCRATCH     (RAM_BASE + 0x00800000)
++#define CONFIG_SYS_ALT_MEMTEST
++
++/* Physical Memory Map */
++#define CONFIG_NR_DRAM_BANKS	       1
++#if defined(CONFIG_MX51) || defined(CONFIG_MX53)
++#define PHYS_SDRAM		       CSD0_BASE_ADDR
++#else
++#define PHYS_SDRAM		       MMDC0_ARB_BASE_ADDR
++#endif
++
++#define CONFIG_RESET_CAUSE_ADDR	       (PHYS_SDRAM + 0x80)
++
++#define CONFIG_SYS_SDRAM_BASE	       PHYS_SDRAM
++#define CONFIG_SYS_INIT_RAM_ADDR       IRAM_BASE_ADDR
++#define CONFIG_SYS_INIT_RAM_SIZE       IRAM_SIZE
++
++#define CONFIG_SYS_INIT_SP_OFFSET \
++	(CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE)
++#define CONFIG_SYS_INIT_SP_ADDR \
++	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
++
++/* Environment organization */
++#define CONFIG_ENV_SIZE			(8 * 1024)
++
++#ifndef CONFIG_ENV_IS_IN_MMC
++#define CONFIG_ENV_IS_IN_SPI_FLASH
++#endif
++
++#if defined(CONFIG_ENV_IS_IN_MMC)
++#define CONFIG_ENV_OFFSET		(6 * 64 * 1024)
++#define CONFIG_SYS_MMC_ENV_DEV		0
++#elif defined(CONFIG_ENV_IS_IN_SPI_FLASH)
++#define CONFIG_ENV_OFFSET		(768 * 1024)
++#define CONFIG_ENV_SECT_SIZE		(8 * 1024)
++#define CONFIG_ENV_SPI_BUS		CONFIG_SF_DEFAULT_BUS
++#define CONFIG_ENV_SPI_CS		CONFIG_SF_DEFAULT_CS
++#define CONFIG_ENV_SPI_MODE		CONFIG_SF_DEFAULT_MODE
++#define CONFIG_ENV_SPI_MAX_HZ		CONFIG_SF_DEFAULT_SPEED
++#endif
++
++/*
++ * PCI express
++ */
++/* #define CONFIG_CMD_PCI */
++#ifdef CONFIG_CMD_PCI
++#define CONFIG_PCI
++#define CONFIG_PCI_PNP
++#define CONFIG_PCI_SCAN_SHOW
++#define CONFIG_PCIE_IMX
++#endif
++
++#define CONFIG_CMD_UNZIP
++
++#ifdef CONFIG_CI_UDC
++#define CONFIG_USB_FUNCTION_MASS_STORAGE
++#define CONFIG_USB_GADGET_VBUS_DRAW	2
++
++#define CONFIG_USB_FUNCTION_FASTBOOT
++#define CONFIG_CMD_FASTBOOT
++#define CONFIG_ANDROID_BOOT_IMAGE
++#define CONFIG_FASTBOOT_BUF_ADDR   CONFIG_SYS_LOAD_ADDR
++#define CONFIG_FASTBOOT_BUF_SIZE   0x26000000
++#define CONFIG_FASTBOOT_FLASH
++#define CONFIG_FASTBOOT_FLASH_MMC_DEV   FASTBOOT_FLASH_MMC_DEV
++#define CONFIG_CMD_GPT
++#define CONFIG_CMD_PART
++
++/* USB Device Firmware Update support */
++#define CONFIG_USB_FUNCTION_DFU
++#define CONFIG_DFU_SF
++#define CONFIG_CMD_DFU
++#define CONFIG_SYS_DFU_DATA_BUF_SIZE	0xc0000
++#define DFU_MANIFEST_POLL_TIMEOUT	25000
++#endif
++
++#define CONFIG_EXTRA_ENV_SETTINGS ENV_SETTINGS 
++#endif
+-- 
+1.9.1
+
