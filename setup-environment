@@ -157,9 +157,6 @@ if [ "$build_dir_setup_enabled" = "true" ]; then
 
 LICENSE_FLAGS_WHITELIST = "commercial"
 
-DL_DIR ?= '/opt/freescale/yocto/imx/'
-SSTATE_DIR ?= '/opt/freescale/yocto/sstate-cache'
-
 EOF
     # Change settings according environment
     sed -e "s,MACHINE ??=.*,MACHINE ??= '$MACHINE',g" \
