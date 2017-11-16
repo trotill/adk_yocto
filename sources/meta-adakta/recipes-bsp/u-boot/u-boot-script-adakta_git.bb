@@ -1,10 +1,10 @@
 LICENSE = "CLOSED"
 DEPENDS = "u-boot-mkimage-native"
 
-SRC_URI = "file://6x_bootscript-yocto-3.14.txt \
-          file://6x_bootscript-mainline.txt \
-          file://6x_upgrade.txt \
-"
+#SRC_URI = "file://6x_bootscript-yocto-3.14.txt \
+#          file://6x_bootscript-mainline.txt \
+#          file://6x_upgrade.txt \
+#"
 
 S = "${WORKDIR}"
 

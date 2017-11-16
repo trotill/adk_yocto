@@ -6,9 +6,8 @@ require recipes-kernel/linux/linux-dtb.inc
 
 SUMMARY = "Linux kernel for ADK"
 
+
 SRC_URI = "git://github.com/boundarydevices/linux-imx6.git;branch=${SRCBRANCH} \
-           file://defconfig \
-           file://0001-Add-Adakta-kernel-support.patch \
 "
 
 LOCALVERSION = "-2.0.0-ga+yocto"
