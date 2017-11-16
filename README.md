@@ -17,7 +17,7 @@ $: MACHINE=adakta-adk DISTRO=fslc-x11 source setup-environment build/
   
 Then create your own distro or compile a demo:  
 core-image-minimal  
-core-image-minimal-xfce
+core-image-minimal-xfce  
 core-image-sato  
 core-image-x11  
   
