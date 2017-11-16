@@ -18,7 +18,7 @@ $: git checkout origin/pyro_adk -b pyro_adk
 $: MACHINE=adakta-adk DISTRO=fslc-x11 source setup-environment build/  
   
 Then create your own distro or compile a demo:  
-core-image-minimal-xfce
+core-image-minimal-xfce  
 core-image-minimal  
 core-image-sato  
 core-image-x11  
