@@ -164,6 +164,8 @@ EOF
         -e "s,DISTRO ?=.*,DISTRO ?= '$DISTRO',g" \
         -i conf/local.conf
 
+    echo 'KERNEL_DEFCONFIG_TYPE = "adk"'>> conf/local.conf
+    echo '#KERNEL_DEFCONFIG_TYPE = "adkstand"'>>conf/local.conf
     cp $TEMPLATES/* conf/
 
     for s in $HOME/.oe $HOME/.yocto; do
