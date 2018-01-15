@@ -57,4 +57,4 @@ addtask deploy after do_install before do_build
 FILES_${PN} += "/"
 
 PACKAGE_ARCH = "${MACHINE_ARCH}"
-COMPATIBLE_MACHINE = "(adakta-adk|adakta-emx)"
+COMPATIBLE_MACHINE = "(nano6ull)"

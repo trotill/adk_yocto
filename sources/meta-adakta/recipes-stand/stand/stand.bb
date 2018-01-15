@@ -35,6 +35,7 @@ do_install() {
     cp -r ${S}/bg ${D}${sysconfdir}/stand 
     cp -r ${S}/init.d ${D}${sysconfdir}/stand 
     cp -r ${S}/xdg ${D}${sysconfdir}/stand
+    ln -s ${KERNEL_DEFCONFIG_TYPE}.json ${D}${sysconfdir}/stand/examples/stand.json
 }
 
 
