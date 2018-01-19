@@ -1,17 +1,19 @@
-From c661e0df0f701b27350600105fa8123a28fb5207 Mon Sep 17 00:00:00 2001
+From 3cb524b585efe17cb45216ca15c357aadc273fd8 Mon Sep 17 00:00:00 2001
 From: Ilya Gorchakov <ilya.gorchakov@adakta.ru>
 Date: Wed, 6 Dec 2017 16:39:18 +0300
 Subject: [PATCH 3/3] Add emx6 module support
 
 This reverts commit b501eaa15b48cf52383aaa9ebb933ce2baba6dfa.
+
+emx stand gpio bugfix
 ---
  arch/arm/boot/dts/Makefile                      |   4 +-
  arch/arm/boot/dts/imx6qdl-adakta_adk.dtsi       |   8 +-
  arch/arm/boot/dts/imx6qdl-adakta_emx.dtsi       | 734 ++++++++++++++++++++++++
- arch/arm/boot/dts/imx6qdl-adakta_emx_stand.dtsi | 547 ++++++++++++++++++
+ arch/arm/boot/dts/imx6qdl-adakta_emx_stand.dtsi | 557 ++++++++++++++++++
  arch/arm/boot/dts/imx6qds-emx.dts               |  45 ++
  arch/arm/boot/dts/imx6qds-emx_stand.dts         |  45 ++
- 6 files changed, 1378 insertions(+), 5 deletions(-)
+ 6 files changed, 1388 insertions(+), 5 deletions(-)
  create mode 100644 arch/arm/boot/dts/imx6qdl-adakta_emx.dtsi
  create mode 100644 arch/arm/boot/dts/imx6qdl-adakta_emx_stand.dtsi
  create mode 100644 arch/arm/boot/dts/imx6qds-emx.dts
@@ -793,10 +795,10 @@ index 0000000..8b7ff07
 +};
 diff --git a/arch/arm/boot/dts/imx6qdl-adakta_emx_stand.dtsi b/arch/arm/boot/dts/imx6qdl-adakta_emx_stand.dtsi
 new file mode 100644
-index 0000000..a666316
+index 0000000..3d4973f
 --- /dev/null
 +++ b/arch/arm/boot/dts/imx6qdl-adakta_emx_stand.dtsi
-@@ -0,0 +1,547 @@
+@@ -0,0 +1,557 @@
 +/* 
 + * Copyright 2017 Adakta, Inc.
 + * Copyright 2013-2016 Boundary Devices, Inc.
@@ -817,27 +819,28 @@ index 0000000..a666316
 +	pinctrl-names = "default";
 +
 +    pinctrl-0 = <&pinctrl_hog>;
-+	iomuxc_imx6q_adakta_adk: iomuxc-imx6q-adakta_adkgrp {
++	iomuxc_imx6q_adakta_emx: iomuxc-imx6q-adakta_emxgrp {
 +		status = "okay";
 +	};
 +};
 +
-+&iomuxc_imx6q_adakta_adk {
++&iomuxc_imx6q_adakta_emx {
 +
 +    pinctrl_hog: hoggrp {
 +		fsl,pins = <
-+			MX6QDL_PAD_KEY_COL4__GPIO4_IO14		0x1b0b0		/* USB_OTG_OC */
-+			MX6QDL_PAD_EIM_D30__GPIO3_IO30		0x1b0b0		/* USB_H1_OC */
++			MX6QDL_PAD_EIM_D21__GPIO3_IO21  	0x1b0b0		/* USB_OTG_OC */
++			MX6QDL_PAD_EIM_D30__GPIO3_IO30 		0x1b0b0		/* USB_H1_OC */
 +
 +			MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x1b0b0		/* UART4_TX */
 +			MX6QDL_PAD_KEY_ROW0__GPIO4_IO07		0x1b0b0		/* UART4_RX */
++			MX6QDL_PAD_SD3_DAT6__GPIO6_IO18     0x1b0b0     /* UART1_RX */
++			MX6QDL_PAD_SD3_DAT7__GPIO6_IO17     0x1b0b0     /* UART1_TX */
++			
 +            MX6QDL_PAD_KEY_ROW2__GPIO4_IO11		0x1b0b0		/* CAN1_RXD */
 +			MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x1b0b0		/* CAN1_TXD */
 +
-+			MX6QDL_PAD_GPIO_16__GPIO7_IO11		0x1b0b0		/* I2C3_SDA */
-+			MX6QDL_PAD_GPIO_5__GPIO1_IO05		0x1b0b0		/* I2C3_SCL */
-+			MX6QDL_PAD_EIM_D28__GPIO3_IO28		0x1b0b0		/* I2C1_SDA */
-+			MX6QDL_PAD_EIM_D21__GPIO3_IO21		0x1b0b0		/* I2C1_SCL */
++			MX6QDL_PAD_CSI0_DAT8__GPIO5_IO26		0x1b0b0		/* I2C1_SDA */
++			MX6QDL_PAD_CSI0_DAT9__GPIO5_IO27		0x1b0b0		/* I2C1_SCL */
 +
 +			MX6QDL_PAD_GPIO_0__GPIO1_IO00		0x1b0b0		/* SAI1.MCLK */
 +			MX6QDL_PAD_SD2_DAT3__GPIO1_IO12		0x1b0b0		/* SAI1.BCLK */
@@ -845,6 +848,15 @@ index 0000000..a666316
 +			MX6QDL_PAD_SD2_DAT2__GPIO1_IO13		0x1b0b0		/* SAI1.TX_DATA */
 +			MX6QDL_PAD_SD2_DAT1__GPIO1_IO14		0x1b0b0		/* SAI1.SYNC */
 +			MX6QDL_PAD_SD2_DAT0__GPIO1_IO15		0x1b0b0		/* SAI1.RX.DATA */
++			
++			MX6QDL_PAD_DISP0_DAT19__GPIO5_IO13  0x1b0b0     /*SPI2_SCLK*/
++ 			MX6QDL_PAD_DISP0_DAT0__GPIO4_IO21   0x1b0b0     /*SPI3_SCLK*/
++
++ 			MX6QDL_PAD_DISP0_DAT17__GPIO5_IO11  0x1b0b0     /*SPI2_MISO*/
++ 			MX6QDL_PAD_DISP0_DAT2__GPIO4_IO23   0x1b0b0     /*SPI3_MISO*/
++
++ 			MX6QDL_PAD_DISP0_DAT16__GPIO5_IO10  0x1b0b0     /*SPI2_MOSI*/
++		    MX6QDL_PAD_DISP0_DAT1__GPIO4_IO22   0x1b0b0     /*SPI3_MOSI*/
 +
 +		>;
 +	};

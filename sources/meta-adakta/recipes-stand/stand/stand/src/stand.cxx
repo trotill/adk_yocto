@@ -220,6 +220,8 @@ int main(int argc, char *argv[])
 
 	system("killall -9 xmessage");
 
+
+
 	g.ClearAllLed();
 #if 0
 	while(1)
@@ -298,6 +300,13 @@ int main(int argc, char *argv[])
 			mdelay(150);
 			g.SetErrorToLed(err_level);
 			mdelay(100);
+		}
+		else
+		{
+
+			g.SetSuccToLed();
+			exit(1);
+
 		}
 	}
 

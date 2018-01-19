@@ -57,5 +57,5 @@
 "usb0":true,
 //usb1 usb otg
 "usb1":true,
-"emmc_dev":"/dev/mmcblk1p1",
+"emmc_dev":"1",
 "emmc":true}

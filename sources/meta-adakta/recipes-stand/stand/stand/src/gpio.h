@@ -470,7 +470,7 @@ echo 0 > /sys/class/gpio/gpio9/value
 
 		printf("Total GPIO %d, errors [%d]\n",TotalGpio,errcnt);
 		Msg  << "Checked: GPIO" << endl;
-		Msg << "    total GPIO" << TotalGpio << ", errors [" << errcnt << "]" << endl;
+		Msg << "    total GPIO " << TotalGpio << ", errors [" << errcnt << "]" << endl;
 		if (errcnt==0)
 			return NO_ERROR;
 		else
@@ -510,6 +510,16 @@ echo 0 > /sys/class/gpio/gpio9/value
 
 		return NO_ERROR;
 	}
+
+	eErrorTp SetSuccToLed()
+		{
+			for (u32 n=0;n<MAX_LED;n++)
+			{
+				SetLED(n,1);
+			}
+
+			return NO_ERROR;
+		}
 
 	private:
 	TTYclass * TTYC;

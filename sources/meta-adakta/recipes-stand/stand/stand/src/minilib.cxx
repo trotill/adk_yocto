@@ -110,7 +110,7 @@ eErrorTp ShowMessage(eErrorTp err,stringstream  & result)
 		result << "Fault: device check fault!!!" << endl;
 
 	result << "'";
-	printf("Result \n[%s]\n",result.str().c_str());
+	printf("%s\n",result.str().c_str());
 
 	stringstream ss;
 	u32 z=0;
