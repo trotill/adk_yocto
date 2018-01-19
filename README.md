@@ -3,7 +3,7 @@
 System build Linux kernel, u-boot, rootfs e.t.c  
   
 Software support for devices:  
-https://adakta.ru/eng/products/system-on-module-ADAKTA-mx6-iMX6  
+<a href="https://adakta.ru/eng/products/system-on-module-ADAKTA-mx6-iMX6">System on Module based on NXP iMX6<a>  
 https://adakta.ru/eng/products/ADAKTA-AMX6-server  
 https://adakta.ru/eng/products/ADAKTA-AMX6-media  
 https://adakta.ru/eng/products/ADAKTA-AMX6-miniPC  
