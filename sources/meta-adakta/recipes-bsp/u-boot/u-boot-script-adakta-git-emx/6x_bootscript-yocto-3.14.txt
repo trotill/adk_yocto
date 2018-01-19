@@ -18,14 +18,12 @@ if itest.s "x" == "x${board}" ; then
 	exit;
 fi
 
-if itest.s "x" == "x${dtbname}" ; then
-	if  itest.s x6DL == "x${cpu}" ; then
-		dtbname=imx6dl-${board}.dtb;
+if  itest.s x6DL == "x${cpu}" ; then
+		dtbname=imx6dl-emx.dtb;
 	elif itest.s x6QP == "x${cpu}" ; then
-		dtbname=imx6qp-${board}.dtb;
+		dtbname=imx6qp-emx.dtb;
 	else
-		dtbname=imx6qds-${board}.dtb;
-	fi
+		dtbname=imx6qds-emx.dtb
 fi
 
 if itest.s x${bootpart} == x ; then

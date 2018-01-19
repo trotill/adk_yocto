@@ -18,11 +18,11 @@ if itest.s "x" == "x${board}" ; then
 fi
 
 if  itest.s x6DL == "x${cpu}" ; then
-		dtbname=imx6dl-adk_stand.dtb;
+		dtbname=imx6dl-emx_stand.dtb;
 	elif itest.s x6QP == "x${cpu}" ; then
-		dtbname=imx6qp-adk_stand.dtb;
+		dtbname=imx6qp-emx_stand.dtb;
 	else
-		dtbname=imx6qds-adk_stand.dtb
+		dtbname=imx6qds-emx_stand.dtb
 fi
 
 if itest.s x${bootpart} == x ; then
