@@ -1,16 +1,17 @@
+FILESEXTRAPATHS_prepend := "${THISDIR}/${P}:${THISDIR}/${P}-${KERNEL_DEFCONFIG_TYPE}:"
 LICENSE = "CLOSED"
 DEPENDS = "u-boot-mkimage-native"
 
-#SRC_URI = "file://6x_bootscript-yocto-3.14.txt \
-#          file://6x_bootscript-mainline.txt \
-#          file://6x_upgrade.txt \
-#"
+SRC_URI = "file://6x_bootscript-adakta.txt \
+          file://6x_bootscript-mainline.txt \
+          file://6x_upgrade.txt \
+"
 
 S = "${WORKDIR}"
 
 inherit deploy
 
-BOOTSCRIPT ??= "${WORKDIR}/6x_bootscript-yocto-3.14.txt"
+BOOTSCRIPT ??= "${WORKDIR}/6x_bootscript-adakta.txt"
 BOOTSCRIPT_use-mainline-bsp ??= "${WORKDIR}/6x_bootscript-mainline.txt"
 SOURCEP = "${WORKDIR}/ubootscript/${MACHINE}"
 UPGRADESCRIPT = "${WORKDIR}/6x_upgrade.txt"
@@ -57,4 +58,4 @@ addtask deploy after do_install before do_build
 FILES_${PN} += "/"
 
 PACKAGE_ARCH = "${MACHINE_ARCH}"
-COMPATIBLE_MACHINE = "(nano6ull)"
+COMPATIBLE_MACHINE = "(adakta_nano6ull)"

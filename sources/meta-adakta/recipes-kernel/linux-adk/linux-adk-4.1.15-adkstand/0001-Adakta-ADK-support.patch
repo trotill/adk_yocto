@@ -1,41 +1,61 @@
-From 9069f08494bf6151728d4225ae1ca22ae3cdaacc Mon Sep 17 00:00:00 2001
-From: ilya <monkeyhouse@mail.ru>
-Date: Mon, 25 Sep 2017 19:08:46 +0400
-Subject: [PATCH] Add Adakta kernel support
+From 71ccb1333dc327038786481a8b9aad1213d30d6a Mon Sep 17 00:00:00 2001
+From: Ilya Gorchakov <ilya.gorchakov@adakta.ru>
+Date: Tue, 30 Jan 2018 19:59:27 +0300
+Subject: [PATCH] Adakta ADK support
 
 ---
- arch/arm/boot/dts/Makefile                |    5 +-
- arch/arm/boot/dts/imx6dl-adk.dts          |   35 +
- arch/arm/boot/dts/imx6qdl-adakta_adk.dtsi |  824 +++++
- arch/arm/boot/dts/imx6qds-adk.dts         |   45 +
- arch/arm/boot/dts/imx6qp-adk.dts          |   64 +
- 6 files changed, 972 insertions(+), 4796 deletions(-)
- delete mode 100644 .config
- create mode 100644 arch/arm/boot/dts/imx6dl-adk.dts
- create mode 100644 arch/arm/boot/dts/imx6qdl-adakta_adk.dtsi
- create mode 100644 arch/arm/boot/dts/imx6qds-adk.dts
+ arch/arm/boot/dts/Makefile                     |  10 +-
+ arch/arm/boot/dts/imx6dls-adk.dts              |  35 ++
+ arch/arm/boot/dts/imx6dls-adk_stand.dts        |  35 ++
+ arch/arm/boot/dts/imx6qd-adakta_adk.dtsi       | 824 +++++++++++++++++++++++++
+ arch/arm/boot/dts/imx6qd-adakta_adk_stand.dtsi | 547 ++++++++++++++++
+ arch/arm/boot/dts/imx6qd-adk.dts               |  45 ++
+ arch/arm/boot/dts/imx6qd-adk_stand.dts         |  45 ++
+ arch/arm/boot/dts/imx6qp-adk.dts               |  64 ++
+ arch/arm/boot/dts/imx6qp-adk_stand.dts         |  64 ++
+ 9 files changed, 1667 insertions(+), 2 deletions(-)
+ create mode 100644 arch/arm/boot/dts/imx6dls-adk.dts
+ create mode 100644 arch/arm/boot/dts/imx6dls-adk_stand.dts
+ create mode 100644 arch/arm/boot/dts/imx6qd-adakta_adk.dtsi
+ create mode 100644 arch/arm/boot/dts/imx6qd-adakta_adk_stand.dtsi
+ create mode 100644 arch/arm/boot/dts/imx6qd-adk.dts
+ create mode 100644 arch/arm/boot/dts/imx6qd-adk_stand.dts
  create mode 100644 arch/arm/boot/dts/imx6qp-adk.dts
+ create mode 100644 arch/arm/boot/dts/imx6qp-adk_stand.dts
+
 diff --git a/arch/arm/boot/dts/Makefile b/arch/arm/boot/dts/Makefile
-index 38557db..4a7104e 100644
+index 38557db..1603115 100644
 --- a/arch/arm/boot/dts/Makefile
 +++ b/arch/arm/boot/dts/Makefile
-@@ -376,7 +376,10 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
+@@ -376,7 +376,13 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
  	imx6q-utc.dtb \
  	imx6q-vp.dtb \
  	imx6q-wandboard.dtb \
 -	imx6q-wandboard-revb1.dtb
 +	imx6q-wandboard-revb1.dtb \
-+	imx6qds-adk.dtb \
++	imx6qd-adk.dtb \
 +	imx6qp-adk.dtb \
-+	imx6dl-adk.dtb
++	imx6dls-adk.dtb \
++	imx6qd-adk_stand.dtb \
++	imx6qp-adk_stand.dtb \
++	imx6dls-adk_stand.dtb 
  dtb-$(CONFIG_SOC_IMX6SL) += \
  	imx6sl-evk.dtb \
  	imx6sl-evk-btwifi.dtb \
-diff --git a/arch/arm/boot/dts/imx6dl-adk.dts b/arch/arm/boot/dts/imx6dl-adk.dts
+@@ -447,7 +453,7 @@ dtb-$(CONFIG_SOC_IMX6ULL) += \
+ 	imx6ull-14x14-evk-gpmi-weim.dtb \
+ 	imx6ull-14x14-evk-usb-certi.dtb \
+ 	imx6ull-9x9-evk.dtb \
+-	imx6ull-9x9-evk-btwifi.dtb
++	imx6ull-9x9-evk-btwifi.dtb 
+ dtb-$(CONFIG_SOC_IMX7D) += \
+ 	imx7d-12x12-lpddr3-arm2.dtb \
+ 	imx7d-12x12-lpddr3-arm2-m4.dtb \
+diff --git a/arch/arm/boot/dts/imx6dls-adk.dts b/arch/arm/boot/dts/imx6dls-adk.dts
 new file mode 100644
-index 0000000..a12d03f
+index 0000000..8acbec7
 --- /dev/null
-+++ b/arch/arm/boot/dts/imx6dl-adk.dts
++++ b/arch/arm/boot/dts/imx6dls-adk.dts
 @@ -0,0 +1,35 @@
 +/* 
 + * Copyright 2017 Adakta, Inc.
@@ -55,10 +75,10 @@ index 0000000..a12d03f
 +
 +#include <dt-bindings/interrupt-controller/irq.h>
 +#include "imx6dl.dtsi"
-+#include "imx6qdl-adakta_adk.dtsi"
++#include "imx6qd-adakta_adk.dtsi"
 +
 +/ {
-+	model = "Freescale i.MX6 DualLite ADAKTA Board";
++	model = "Freescale i.MX6 Solo/DualLite ADAKTA Board";
 +	compatible = "fsl,imx6dl-adk", "fsl,imx6dl";
 +};
 +
@@ -72,11 +92,52 @@ index 0000000..a12d03f
 +&pxp {
 +	status = "okay";
 +};
-diff --git a/arch/arm/boot/dts/imx6qdl-adakta_adk.dtsi b/arch/arm/boot/dts/imx6qdl-adakta_adk.dtsi
+diff --git a/arch/arm/boot/dts/imx6dls-adk_stand.dts b/arch/arm/boot/dts/imx6dls-adk_stand.dts
 new file mode 100644
-index 0000000..2eee18e
+index 0000000..3a1e826
 --- /dev/null
-+++ b/arch/arm/boot/dts/imx6qdl-adakta_adk.dtsi
++++ b/arch/arm/boot/dts/imx6dls-adk_stand.dts
+@@ -0,0 +1,35 @@
++/* 
++ * Copyright 2017 Adakta, Inc.
++ * Copyright 2013 Boundary Devices, Inc.
++ * Copyright 2012 Freescale Semiconductor, Inc.
++ * Copyright 2011 Linaro Ltd.
++ *
++ * The code contained herein is licensed under the GNU General Public
++ * License. You may obtain a copy of the GNU General Public License
++ * Version 2 or later at the following locations:
++ *
++ * http://www.opensource.org/licenses/gpl-license.html
++ * http://www.gnu.org/copyleft/gpl.html
++ */
++
++/dts-v1/;
++
++#include <dt-bindings/interrupt-controller/irq.h>
++#include "imx6dl.dtsi"
++#include "imx6qd-adakta_adk_stand.dtsi"
++
++/ {
++	model = "Freescale i.MX6 Solo/DualLite ADAKTA Board";
++	compatible = "fsl,imx6dl-adk", "fsl,imx6dl";
++};
++
++
++&hdmi_core {
++	ipu_id = <0>;
++};
++
++
++
++&pxp {
++	status = "okay";
++};
+diff --git a/arch/arm/boot/dts/imx6qd-adakta_adk.dtsi b/arch/arm/boot/dts/imx6qd-adakta_adk.dtsi
+new file mode 100644
+index 0000000..224be66
+--- /dev/null
++++ b/arch/arm/boot/dts/imx6qd-adakta_adk.dtsi
 @@ -0,0 +1,824 @@
 +/* 
 + * Copyright 2017 Adakta, Inc.
@@ -106,10 +167,10 @@ index 0000000..2eee18e
 +&iomuxc_imx6q_adakta_adk {
 +	pinctrl_audmux: audmuxgrp {
 +		fsl,pins = <
-+			MX6QDL_PAD_CSI0_DAT7__AUD3_RXD		0x130b0
-+			MX6QDL_PAD_CSI0_DAT4__AUD3_TXC		0x130b0
-+			MX6QDL_PAD_CSI0_DAT5__AUD3_TXD		0x110b0
-+			MX6QDL_PAD_CSI0_DAT6__AUD3_TXFS		0x130b0
++			MX6QDL_PAD_SD2_DAT0__AUD4_RXD		0x130b0
++			MX6QDL_PAD_SD2_DAT3__AUD4_TXC		0x130b0
++			MX6QDL_PAD_SD2_DAT2__AUD4_TXD		0x110b0
++			MX6QDL_PAD_SD2_DAT1__AUD4_TXFS		0x130b0
 +		>;
 +	};
 +
@@ -902,11 +963,564 @@ index 0000000..2eee18e
 +	vmmc-supply = <&reg_3p3v>;
 +	status = "okay";
 +};
-diff --git a/arch/arm/boot/dts/imx6qds-adk.dts b/arch/arm/boot/dts/imx6qds-adk.dts
+diff --git a/arch/arm/boot/dts/imx6qd-adakta_adk_stand.dtsi b/arch/arm/boot/dts/imx6qd-adakta_adk_stand.dtsi
 new file mode 100644
-index 0000000..e372e6b
+index 0000000..a666316
 --- /dev/null
-+++ b/arch/arm/boot/dts/imx6qds-adk.dts
++++ b/arch/arm/boot/dts/imx6qd-adakta_adk_stand.dtsi
+@@ -0,0 +1,547 @@
++/* 
++ * Copyright 2017 Adakta, Inc.
++ * Copyright 2013-2016 Boundary Devices, Inc.
++ * Copyright 2011-2015 Freescale Semiconductor, Inc.
++ * Copyright 2011 Linaro Ltd.
++ *
++ * The code contained herein is licensed under the GNU General Public
++ * License. You may obtain a copy of the GNU General Public License
++ * Version 2 or later at the following locations:
++ *
++ * http://www.opensource.org/licenses/gpl-license.html
++ * http://www.gnu.org/copyleft/gpl.html
++ */
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
++
++&iomuxc {
++	pinctrl-names = "default";
++
++    pinctrl-0 = <&pinctrl_hog>;
++	iomuxc_imx6q_adakta_adk: iomuxc-imx6q-adakta_adkgrp {
++		status = "okay";
++	};
++};
++
++&iomuxc_imx6q_adakta_adk {
++
++    pinctrl_hog: hoggrp {
++		fsl,pins = <
++			MX6QDL_PAD_KEY_COL4__GPIO4_IO14		0x1b0b0		/* USB_OTG_OC */
++			MX6QDL_PAD_EIM_D30__GPIO3_IO30		0x1b0b0		/* USB_H1_OC */
++
++			MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x1b0b0		/* UART4_TX */
++			MX6QDL_PAD_KEY_ROW0__GPIO4_IO07		0x1b0b0		/* UART4_RX */
++            MX6QDL_PAD_KEY_ROW2__GPIO4_IO11		0x1b0b0		/* CAN1_RXD */
++			MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x1b0b0		/* CAN1_TXD */
++
++			MX6QDL_PAD_GPIO_16__GPIO7_IO11		0x1b0b0		/* I2C3_SDA */
++			MX6QDL_PAD_GPIO_5__GPIO1_IO05		0x1b0b0		/* I2C3_SCL */
++			MX6QDL_PAD_EIM_D28__GPIO3_IO28		0x1b0b0		/* I2C1_SDA */
++			MX6QDL_PAD_EIM_D21__GPIO3_IO21		0x1b0b0		/* I2C1_SCL */
++
++			MX6QDL_PAD_GPIO_0__GPIO1_IO00		0x1b0b0		/* SAI1.MCLK */
++			MX6QDL_PAD_SD2_DAT3__GPIO1_IO12		0x1b0b0		/* SAI1.BCLK */
++			
++			MX6QDL_PAD_SD2_DAT2__GPIO1_IO13		0x1b0b0		/* SAI1.TX_DATA */
++			MX6QDL_PAD_SD2_DAT1__GPIO1_IO14		0x1b0b0		/* SAI1.SYNC */
++			MX6QDL_PAD_SD2_DAT0__GPIO1_IO15		0x1b0b0		/* SAI1.RX.DATA */
++
++		>;
++	};
++
++	pinctrl_enet: enetgrp {
++		fsl,pins = <
++			MX6QDL_PAD_ENET_MDIO__ENET_MDIO		0x1b0b0
++			MX6QDL_PAD_ENET_MDC__ENET_MDC		0x1b0b0
++			MX6QDL_PAD_RGMII_TXC__RGMII_TXC		0x100b0
++			MX6QDL_PAD_RGMII_TD0__RGMII_TD0		0x100b0
++			MX6QDL_PAD_RGMII_TD1__RGMII_TD1		0x100b0
++			MX6QDL_PAD_RGMII_TD2__RGMII_TD2		0x100b0
++			MX6QDL_PAD_RGMII_TD3__RGMII_TD3		0x100b0
++			MX6QDL_PAD_RGMII_TX_CTL__RGMII_TX_CTL	0x100b0
++			MX6QDL_PAD_ENET_REF_CLK__ENET_TX_CLK	0x100b0
++			MX6QDL_PAD_RGMII_RXC__RGMII_RXC		0x1b0b0
++			MX6QDL_PAD_RGMII_RD0__RGMII_RD0		0x1b0b0
++			MX6QDL_PAD_RGMII_RD1__RGMII_RD1		0x1b0b0
++			MX6QDL_PAD_RGMII_RD2__RGMII_RD2		0x1b0b0
++			MX6QDL_PAD_RGMII_RD3__RGMII_RD3		0x1b0b0
++			MX6QDL_PAD_RGMII_RX_CTL__RGMII_RX_CTL	0x1b0b0
++#define GP_ENET_PHY_RESET	<&gpio3 23 GPIO_ACTIVE_LOW>
++			MX6QDL_PAD_EIM_D23__GPIO3_IO23	0x030b0
++#define GPIRQ_ENET_PHY		<&gpio1 28 IRQ_TYPE_LEVEL_LOW>
++			MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28	0x1b0b0
++		>;
++	};
++
++    //Mipi camera/HDMI
++	pinctrl_i2c2: i2c2grp {
++		fsl,pins = <
++			MX6QDL_PAD_KEY_COL3__I2C2_SCL		0x4001b8b1
++			MX6QDL_PAD_KEY_ROW3__I2C2_SDA		0x4001b8b1
++		>;
++	};
++
++	pinctrl_pcie: pciegrp {
++		fsl,pins = <
++#define GP_PCIE_RESET	<&gpio7 12 GPIO_ACTIVE_LOW>
++			MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x0b0b0
++		>;
++	};
++
++	//Mipi camera
++	pinctrl_i2c2_ov5640_mipi: i2c2-ov5640-mipigrp {
++		fsl,pins = <
++#define GP_OV5640_MIPI_POWER_DOWN	<&gpio6 9 GPIO_ACTIVE_HIGH>
++			MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x0b0b0
++#define GP_OV5640_MIPI_RESET		<&gpio2 5 GPIO_ACTIVE_LOW>
++			MX6QDL_PAD_NANDF_D5__GPIO2_IO05		0x000b0
++		>;
++	};
++
++	//Camera clock
++	pinctrl_pwm3: pwm3grp {
++		fsl,pins = <
++			MX6QDL_PAD_SD1_DAT1__PWM3_OUT		0x1b0b1
++		>;
++	};
++
++    //Lvds bl
++	pinctrl_pwm4: pwm4grp {
++		fsl,pins = <
++			MX6QDL_PAD_SD1_CMD__PWM4_OUT		0x1b0b1
++		>;
++	};
++
++    //Console
++	pinctrl_uart2: uart2grp {
++		fsl,pins = <
++			MX6QDL_PAD_EIM_D26__UART2_TX_DATA	0x1b0b1
++			MX6QDL_PAD_EIM_D27__UART2_RX_DATA	0x1b0b1
++		>;
++	};
++
++    //UART for stand iface 
++	pinctrl_uart3: uart3grp {
++		fsl,pins = <
++			MX6QDL_PAD_EIM_D24__UART3_TX_DATA	0x1b0b1
++			MX6QDL_PAD_EIM_D25__UART3_RX_DATA	0x1b0b1
++		>;
++	};
++
++	//Usb ID only
++	pinctrl_usbotg: usbotggrp {
++		fsl,pins = <
++			MX6QDL_PAD_GPIO_1__USB_OTG_ID		0x17059
++		>;
++	};
++
++    //uSD card
++    pinctrl_usdhc3: usdhc3grp {
++		fsl,pins = <
++			MX6QDL_PAD_SD3_CMD__SD3_CMD		0x17059
++			MX6QDL_PAD_SD3_CLK__SD3_CLK		0x10059
++			MX6QDL_PAD_SD3_DAT0__SD3_DATA0		0x17059
++			MX6QDL_PAD_SD3_DAT1__SD3_DATA1		0x17059
++			MX6QDL_PAD_SD3_DAT2__SD3_DATA2		0x17059
++			MX6QDL_PAD_SD3_DAT3__SD3_DATA3		0x17059
++#define GP_USDHC3_CD	<&gpio7 0 GPIO_ACTIVE_LOW>
++			MX6QDL_PAD_SD3_DAT5__GPIO7_IO00		0x1b0b0
++		>;
++	};
++
++	//emmc
++	pinctrl_usdhc4: usdhc4grp {
++		fsl,pins = <
++			MX6QDL_PAD_SD4_CMD__SD4_CMD		0x17071
++			MX6QDL_PAD_SD4_CLK__SD4_CLK		0x10071
++			MX6QDL_PAD_SD4_DAT0__SD4_DATA0		0x17071
++			MX6QDL_PAD_SD4_DAT1__SD4_DATA1		0x17071
++			MX6QDL_PAD_SD4_DAT2__SD4_DATA2		0x17071
++			MX6QDL_PAD_SD4_DAT3__SD4_DATA3		0x17071
++			MX6QDL_PAD_SD4_DAT4__SD4_DATA4		0x17071
++			MX6QDL_PAD_SD4_DAT5__SD4_DATA5		0x17071
++			MX6QDL_PAD_SD4_DAT6__SD4_DATA6		0x17071
++			MX6QDL_PAD_SD4_DAT7__SD4_DATA7		0x17071
++		>;
++	};
++
++};
++
++/ {
++	aliases {
++		backlight_lvds = &backlight_lvds;
++		fb_hdmi = &fb_hdmi;
++		fb_lvds = &fb_lvds;
++		fb_lvds2 = &fb_lvds2;
++		ldb = &ldb;
++		mmc0 = &usdhc3;
++		mmc1 = &usdhc4;
++		mxcfb0 = &fb_lvds;
++		mxcfb1 = &fb_lvds2;
++		mxcfb2 = &fb_hdmi;
++		pwm_lvds = &pwm4;
++		//t_lvds = &t_lvds;
++	};
++
++	backlight_lvds: backlight_lvds {
++		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
++		compatible = "pwm-backlight";
++		default-brightness-level = <8>;
++		display = <&fb_lvds>;
++		power-supply = <&reg_3p3v>;
++		pwms = <&pwm4 0 5000000>;
++		status = "okay";
++	};
++
++	chosen {
++		stdout-path = &uart2;
++	};
++
++	clocks {
++		clk24m: clk24m {
++			compatible = "fixed-clock";
++			#clock-cells = <0>;
++			clock-frequency = <24000000>;
++		};
++	};
++
++	fb_lvds: fb@0 {
++		compatible = "fsl,mxc_sdc_fb";
++		disp_dev = "ldb";
++		interface_pix_fmt = "RGB666";
++		default_bpp = <16>;
++		int_clk = <0>;
++		late_init = <0>;
++		status = "okay";
++	};
++
++	fb_lvds2: fb@1 {
++		compatible = "fsl,mxc_sdc_fb";
++		disp_dev = "ldb";
++		interface_pix_fmt = "RGB666";
++		default_bpp = <16>;
++		int_clk = <0>;
++		late_init = <0>;
++		status = "okay";
++	};
++
++	fb_hdmi: fb@2 {
++		compatible = "fsl,mxc_sdc_fb";
++		disp_dev = "hdmi";
++		interface_pix_fmt = "RGB24";
++		mode_str ="1024x600M@60";
++		default_bpp = <32>;
++		int_clk = <0>;
++		late_init = <0>;
++		status = "okay";
++	};
++
++	memory {
++		reg = <0x10000000 0x40000000>;
++	};
++
++	mipi_mclk: mipi_mclk {
++		compatible = "pwm-clock";
++		#clock-cells = <0>;
++		clock-frequency = <22000000>;
++		clock-output-names = "mipi_mclk";
++		pwms = <&pwm3 0 45>; /* 1 / 45 ns = 22 MHz */
++	};
++
++	regulators {
++		compatible = "simple-bus";
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		reg_1p8v: regulator@0 {
++			compatible = "regulator-fixed";
++			reg = <0>;
++			regulator-name = "1P8V";
++			regulator-min-microvolt = <1800000>;
++			regulator-max-microvolt = <1800000>;
++			regulator-always-on;
++		};
++
++		reg_2p5v: regulator@1 {
++			compatible = "regulator-fixed";
++			reg = <1>;
++			regulator-name = "2P5V";
++			regulator-min-microvolt = <2500000>;
++			regulator-max-microvolt = <2500000>;
++			regulator-always-on;
++		};
++
++		reg_3p3v: regulator@2 {
++			compatible = "regulator-fixed";
++			reg = <2>;
++			regulator-name = "3P3V";
++			regulator-min-microvolt = <3300000>;
++			regulator-max-microvolt = <3300000>;
++			regulator-always-on;
++		};
++
++		reg_usbotg_vbus: regulator@3 {
++			compatible = "regulator-fixed";
++			reg = <3>;
++			regulator-name = "usb_otg_vbus";
++			regulator-min-microvolt = <5000000>;
++			regulator-max-microvolt = <5000000>;
++			enable-active-high;
++		};
++
++	};
++
++	sound-hdmi {
++		compatible = "fsl,imx6q-audio-hdmi",
++			     "fsl,imx-audio-hdmi";
++		model = "imx-audio-hdmi";
++		hdmi-controller = <&hdmi_audio>;
++	};
++
++	v4l2_cap_0: v4l2_cap_0 {
++		compatible = "fsl,imx6q-v4l2-capture";
++		ipu_id = <0>;
++		csi_id = <0>;
++		mclk_source = <0>;
++		status = "okay";
++	};
++
++	v4l2_cap_1: v4l2_cap_1 {
++		compatible = "fsl,imx6q-v4l2-capture";
++		ipu_id = <0>;
++		csi_id = <1>;
++		mipi_camera = <1>;
++		mclk_source = <0>;
++		status = "okay";
++	};
++
++	v4l2_cap_2: v4l2_cap_2 {
++		compatible = "fsl,imx6q-v4l2-capture";
++		ipu_id = <0>;
++		csi_id = <1>;
++		mclk_source = <0>;
++		status = "okay";
++	};
++
++	v4l2_cap_3: v4l2_cap_3 {
++		compatible = "fsl,imx6q-v4l2-capture";
++		ipu_id = <0>;
++		csi_id = <0>;
++		mipi_camera = <1>;
++		mclk_source = <0>;
++		status = "okay";
++	};
++
++	v4l2_out {
++		compatible = "fsl,mxc_v4l2_output";
++		status = "okay";
++	};
++};
++
++&fec {
++	phy-handle = <&ethphy>;
++	phy-mode = "rgmii";
++	phy-reset-gpios = GP_ENET_PHY_RESET;
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_enet>;
++	rxc-skew-ps = <3000>;
++	rxd0-skew-ps = <0>;
++	rxd1-skew-ps = <0>;
++	rxd2-skew-ps = <0>;
++	rxd3-skew-ps = <0>;
++	rxdv-skew-ps = <0>;
++	txc-skew-ps = <3000>;
++	txd0-skew-ps = <0>;
++	txd1-skew-ps = <0>;
++	txd2-skew-ps = <0>;
++	txd3-skew-ps = <0>;
++	txen-skew-ps = <0>;
++	status = "okay";
++
++	mdio {
++		#address-cells = <0>;
++		#size-cells = <1>;
++
++		ethphy: ethernet-phy {
++			interrupts-extended = GPIRQ_ENET_PHY;
++		};
++	};
++};
++
++&hdmi_audio {
++	status = "okay";
++};
++
++&hdmi_core {
++	ipu_id = <0>;
++	disp_id = <0>;
++	status = "okay";
++};
++
++&hdmi_video {
++	fsl,phy_reg_vlev = <0x0294>;
++	fsl,phy_reg_cksymtx = <0x800d>;
++	status = "okay";
++	/*
++	*override_edid = [
++ 00 FF FF FF FF FF FF 00 1D 36 66 06 01 00 00 00
++ 02 1B 01 03 80 10 0A 78 2B 38 55 A6 56 24 12 48
++ 9A 50 54 00 00 00 01 00 01 00 01 00 01 00 01 00
++ 01 00 01 00 01 00 00 14 00 40 41 58 22 20 04 0D
++ 13 00 9A 5A 00 00 00 10 00 00 00 10 00 00 00 00
++ 00 00 00 00 00 00 00 00 00 00 00 00 00 10 00 00
++ 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 10
++ 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 14 ];*/
++};
++
++&i2c2 {
++	clock-frequency = <100000>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_i2c2>;
++	status = "okay";
++
++	hdmi: edid@50 {
++		compatible = "fsl,imx6-hdmi-i2c";
++		reg = <0x50>;
++	};
++
++	ov5640_mipi: ov5640_mipi@3e {
++		compatible = "ovti,ov5640_mipi";
++		reg = <0x3e>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_i2c2_ov5640_mipi>;
++		clocks = <&mipi_mclk>;
++		clock-names = "csi_mclk";
++		DOVDD-supply = <&reg_1p8v>;
++		AVDD-supply = <&reg_2p5v>;
++		DVDD-supply = <&reg_1p8v>;
++		pwn-gpios = GP_OV5640_MIPI_POWER_DOWN;
++		rst-gpios = GP_OV5640_MIPI_RESET;
++		ipu_id = <0>;
++		csi_id = <1>;
++		mclk = <22000000>;
++		mclk_source = <0>;
++	};
++};
++
++&ldb {
++	status = "okay";
++    dual-mode;
++	lvds-channel@0 {
++		crtc = "ipu1-di0";
++		fsl,data-mapping = "spwg";
++		fsl,data-width = <18>;
++		status = "okay";
++		//primary;
++		display-timings {
++	    	okaya1024x600: okaya7x0WP {
++				clock-frequency = <65000000>;
++				hactive = <1024>;
++				vactive = <600>;
++				hback-porch = <220>;
++				hfront-porch = <40>;
++				vback-porch = <7>;
++				vfront-porch = <21>;
++				hsync-len = <60>;
++				vsync-len = <10>;
++			};
++		};
++		
++	};
++
++
++	lvds-channel@1 {
++		crtc = "ipu1-di0";
++		fsl,data-mapping = "spwg";
++		fsl,data-width = <18>;
++		status = "okay";
++		display-timings {
++	    	okaya1024x600_2: okaya7x0WP {
++				clock-frequency = <65000000>;
++				hactive = <1024>;
++				vactive = <600>;
++				hback-porch = <220>;
++				hfront-porch = <40>;
++				vback-porch = <7>;
++				vfront-porch = <21>;
++				hsync-len = <60>;
++				vsync-len = <10>;
++			};
++		};
++	};
++	
++
++};
++
++&mipi_csi {
++	lanes = <2>;
++	status = "okay";
++};
++
++&pcie {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_pcie>;
++	reset-gpio = GP_PCIE_RESET;
++	status = "okay";
++};
++
++
++&pwm3 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_pwm3>;
++	status = "okay";
++};
++
++&pwm4 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_pwm4>;
++	status = "okay";
++};
++
++
++
++&uart2 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_uart2>;
++	status = "okay";
++};
++
++&uart3 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_uart3>;
++	status = "okay";
++};
++
++
++&usbh1 {
++	disable-over-current;
++	status = "okay";
++};
++
++&usbotg {
++	vbus-supply = <&reg_usbotg_vbus>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_usbotg>;
++	disable-over-current;
++	status = "okay";
++};
++
++&usdhc3 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_usdhc3>;
++	cd-gpios = GP_USDHC3_CD;
++	vmmc-supply = <&reg_3p3v>;
++	status = "okay";
++};
++
++&usdhc4 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_usdhc4>;
++	bus-width = <8>;
++	non-removable;
++	cap-power-off-card;
++	keep-power-in-suspend;
++	vmmc-supply = <&reg_3p3v>;
++	status = "okay";
++};
+diff --git a/arch/arm/boot/dts/imx6qd-adk.dts b/arch/arm/boot/dts/imx6qd-adk.dts
+new file mode 100644
+index 0000000..06bc534
+--- /dev/null
++++ b/arch/arm/boot/dts/imx6qd-adk.dts
 @@ -0,0 +1,45 @@
 +/*
 + * Copyright 2017 Adakta, Inc.
@@ -926,10 +1540,61 @@ index 0000000..e372e6b
 +
 +#include <dt-bindings/interrupt-controller/irq.h>
 +#include "imx6q.dtsi"
-+#include "imx6qdl-adakta_adk.dtsi"
++#include "imx6qd-adakta_adk.dtsi"
 +
 +/ {
-+	model = "Freescale i.MX6 Quad/Dual/Solo ADAKTA Board";
++	model = "Freescale i.MX6 Quad/Dual ADAKTA Board";
++	compatible = "fsl,imx6qds-adk", "fsl,imx6q";
++};
++
++
++&hdmi_core {
++	ipu_id = <1>;
++};
++
++&ov5640_mipi {
++	ipu_id = <1>;
++	csi_id = <0>;
++};
++
++&sata {
++	status = "okay";
++};
++
++/* ov5640_mipi */
++&v4l2_cap_1 {
++	ipu_id = <1>;
++	csi_id = <0>;
++	mipi_camera = <1>;
++};
+diff --git a/arch/arm/boot/dts/imx6qd-adk_stand.dts b/arch/arm/boot/dts/imx6qd-adk_stand.dts
+new file mode 100644
+index 0000000..4fd9d21
+--- /dev/null
++++ b/arch/arm/boot/dts/imx6qd-adk_stand.dts
+@@ -0,0 +1,45 @@
++/*
++ * Copyright 2017 Adakta, Inc.
++ * Copyright 2013-2016 Boundary Devices, Inc.
++ * Copyright 2012 Freescale Semiconductor, Inc.
++ * Copyright 2011 Linaro Ltd.
++ *
++ * The code contained herein is licensed under the GNU General Public
++ * License. You may obtain a copy of the GNU General Public License
++ * Version 2 or later at the following locations:
++ *
++ * http://www.opensource.org/licenses/gpl-license.html
++ * http://www.gnu.org/copyleft/gpl.html
++ */
++
++/dts-v1/;
++
++#include <dt-bindings/interrupt-controller/irq.h>
++#include "imx6q.dtsi"
++#include "imx6qd-adakta_adk_stand.dtsi"
++
++/ {
++	model = "Freescale i.MX6 Quad/Dual ADAKTA Stand Board";
 +	compatible = "fsl,imx6qds-adk", "fsl,imx6q";
 +};
 +
@@ -955,7 +1620,7 @@ index 0000000..e372e6b
 +};
 diff --git a/arch/arm/boot/dts/imx6qp-adk.dts b/arch/arm/boot/dts/imx6qp-adk.dts
 new file mode 100644
-index 0000000..4abbd2d
+index 0000000..ca129b6
 --- /dev/null
 +++ b/arch/arm/boot/dts/imx6qp-adk.dts
 @@ -0,0 +1,64 @@
@@ -977,7 +1642,77 @@ index 0000000..4abbd2d
 +
 +#include "imx6q.dtsi"
 +#include "imx6qp.dtsi"
-+#include "imx6qdl-adakta_adk.dtsi"
++#include "imx6qd-adakta_adk.dtsi"
++
++/ {
++	model = "Freescale i.MX6 Quad Plus ADAKTA Board";
++	compatible = "fsl,imx6qp-adk", "fsl,imx6q";
++
++	memory: memory {
++		reg = <0x10000000 0x80000000>;
++	};
++};
++
++
++&sata {
++	status = "okay";
++};
++
++&v4l2_cap_2 {
++	ipu_id = <1>;
++};
++
++&pre1 {
++	status = "okay";
++};
++
++&pre2 {
++	status = "okay";
++};
++
++&pre3 {
++	status = "okay";
++};
++
++&pre4 {
++	status = "okay";
++};
++
++&prg1 {
++	memory-region = <&memory>;
++	status = "okay";
++};
++
++&prg2 {
++	memory-region = <&memory>;
++	status = "okay";
++};
++
+diff --git a/arch/arm/boot/dts/imx6qp-adk_stand.dts b/arch/arm/boot/dts/imx6qp-adk_stand.dts
+new file mode 100644
+index 0000000..4393123
+--- /dev/null
++++ b/arch/arm/boot/dts/imx6qp-adk_stand.dts
+@@ -0,0 +1,64 @@
++/* 
++ * Copyright 2017 Adakta, Inc.
++ * Copyright 2013 Boundary Devices
++ * Copyright 2012 Freescale Semiconductor, Inc.
++ * Copyright 2011 Linaro Ltd.
++ *
++ * The code contained herein is licensed under the GNU General Public
++ * License. You may obtain a copy of the GNU General Public License
++ * Version 2 or later at the following locations:
++ *
++ * http://www.opensource.org/licenses/gpl-license.html
++ * http://www.gnu.org/copyleft/gpl.html
++ */
++
++/dts-v1/;
++
++#include "imx6q.dtsi"
++#include "imx6qp.dtsi"
++#include "imx6qd-adakta_adk_stand.dtsi"
 +
 +/ {
 +	model = "Freescale i.MX6 Quad Plus ADAKTA Board";

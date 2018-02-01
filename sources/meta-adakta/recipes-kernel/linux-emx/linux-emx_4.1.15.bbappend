@@ -8,8 +8,6 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/${P}:${THISDIR}/${P}-${KERNEL_DEFCONFIG_T
 SUMMARY = "Linux kernel for EMX6 additions"
 
 SRC_URI += "file://defconfig \
-		   file://0001-Add-Adakta-kernel-support.patch \
-           file://0002-Add-ADK-stand-support.patch \
-           file://0003-Add-emx6-module-support.patch \
+		   file://0001-Add-adakta-emx6-support.patch \
 "
 

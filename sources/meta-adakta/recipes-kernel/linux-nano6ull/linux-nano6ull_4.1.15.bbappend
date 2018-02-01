@@ -5,9 +5,10 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/${P}:${THISDIR}/${P}-${KERNEL_DEFCONFIG_T
 
 #bbwarn FILESEXTRAPATHS_prepend ${FILESEXTRAPATHS_prepend}
 
-SUMMARY = "Linux kernel for ADK additions"
+SUMMARY = "Linux kernel for Nano6ULL additions"
 
 SRC_URI += "file://defconfig \
-		   file://0001-Adakta-ADK-support.patch \
+		   file://0001-Add-adakta-nano6ull-support.patch \
 "
 
+COMPATIBLE_MACHINE = "(adakta_nano6ull)"
