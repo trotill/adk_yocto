@@ -9,6 +9,7 @@ SUMMARY = "Linux kernel for Nano6ULL additions"
 
 SRC_URI += "file://defconfig \
 		   file://0001-Add-adakta-nano6ull-support.patch \
+		   file://0002-Switch-NAND-to-legacy-ecc-mode.patch \
 "
 
 COMPATIBLE_MACHINE = "(adakta_nano6ull)"

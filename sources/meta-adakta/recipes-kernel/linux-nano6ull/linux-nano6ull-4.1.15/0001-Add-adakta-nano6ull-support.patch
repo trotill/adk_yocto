@@ -14,7 +14,7 @@ diff --git a/arch/arm/boot/dts/Makefile b/arch/arm/boot/dts/Makefile
 index 38557db..33d2332 100644
 --- a/arch/arm/boot/dts/Makefile
 +++ b/arch/arm/boot/dts/Makefile
-@@ -447,7 +447,8 @@ dtb-$(CONFIG_SOC_IMX6ULL) += \
+@@ -427,7 +427,8 @@ dtb-$(CONFIG_SOC_IMX6ULL) += \
  	imx6ull-14x14-evk-gpmi-weim.dtb \
  	imx6ull-14x14-evk-usb-certi.dtb \
  	imx6ull-9x9-evk.dtb \
