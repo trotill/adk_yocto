@@ -1,0 +1,58 @@
+setenv bootargs ''
+
+setenv initrd_high 0xffffffff
+
+a_base=0x80000000
+a_script=0x80800000
+a_zImage=0x82000000
+a_fdt=0x84000000
+setenv console ttymxc0
+
+if itest.s "x" == "x${dtbname}" ; then
+	echo Run setenv dtbname <dtb filename>;
+	exit;
+fi
+
+if itest.s x == x${bootdir} ; then
+	bootdir=/
+fi
+
+if itest.s x${bootpart} == x ; then
+	bootpart=1
+fi
+
+
+if load ${dtype} ${disk}:${bootpart} ${a_fdt} ${bootdir}${dtbname} ; then
+	fdt addr ${a_fdt}
+	setenv fdt_high 0xffffffff
+else
+	echo "!!!! Error loading ${bootdir}${dtbname}";
+	exit;
+fi
+
+setenv bootargs "${bootargs} console=${console},115200 vmalloc=400M consoleblank=0 rootwait fixrtc"
+setenv bootargs "${bootargs} rw mtdparts=gpmi-nand:100m(default),-(shared)"
+
+fdt resize
+
+bpart=2
+
+if test "usb" = "${dtype}" ; then
+	setenv bootargs "${bootargs} root=/dev/sda${bpart}" ;
+else
+	setenv bootargs "${bootargs} root=/dev/mmcblk${disk}p${bpart}"
+fi
+
+if itest.s "x" != "x${loglevel}" ; then
+	setenv bootargs ${bootargs} loglevel=${loglevel}
+fi
+
+
+if itest.s "x" != "x${show_fdt}" ; then
+	fdt print /
+fi
+
+if load ${dtype} ${disk}:${bootpart} ${a_zImage} /zImage ; then
+	bootz ${a_zImage} - ${a_fdt}
+fi
+echo "Error loading kernel image"

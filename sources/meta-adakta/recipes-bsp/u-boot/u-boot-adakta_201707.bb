@@ -5,7 +5,7 @@ require recipes-bsp/u-boot/u-boot.inc
 DESCRIPTION = "u-boot for Adakta boards."
 LICENSE = "GPLv2+"
 LIC_FILES_CHKSUM = "file://Licenses/README;md5=a2c678cfd4a4d97135585cad908541c6"
-COMPATIBLE_MACHINE = "(adakta-adk|adakta-emx|adakta_nano6ull)"
+COMPATIBLE_MACHINE = "(adakta-adk|adakta-emx|adakta_nano6ull|adakta_dp6ull)"
 
 PROVIDES = "u-boot"
 
@@ -22,6 +22,7 @@ SRC_URI = "git://github.com/boundarydevices/u-boot-imx6.git;branch=${SRCBRANCH} 
 		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "adkstand","file://0001-adk-support.patch","",d)} \
 		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "emx","file://0001-Add-adakta-emx6-support.patch","",d)} \
 		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "adakta_nano6ull","file://0001-Add-adakta-nano6ull-module-support-nand-correct.patch","",d)} \
+		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "adakta_dp6ull","file://dp6ull_support.patch","",d)} \
 		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "emxstand","file://0001-Add-adakta-emx6-support.patch","",d)}"
 
 
