@@ -17,12 +17,14 @@ Software support for NXP i.MX6ULL series:
 How to use?  
 
 1) Clone
+
 $: git clone git@github.com:trotill/adk_yocto.git  
 $: cd adk_yocto/  
 $: git checkout origin/pyro_adk -b pyro_adk  
 $: MACHINE=adakta-adk DISTRO=fslc-x11 source setup-environment build/  
 
 2) Create your distro or compile the demo:
+
 core-image-minimal-xfce  
 core-image-minimal  
 core-image-sato  
@@ -30,7 +32,8 @@ core-image-x11
 For example: 
 $: bitbake core-image-minimal  
 
-3) Flash build/tmp/deploy/core-image-minimal-adk.sdcard.gz to microSD card  
+3) Flash build/tmp/deploy/core-image-minimal-adk.sdcard.gz to microSD card
+
 3.1) Windows: You can do it by using usb-image-tools
 http://www.alexpage.de/usb-image-tool/download/  
 3.2) Linux: Use dd+gunzip  
