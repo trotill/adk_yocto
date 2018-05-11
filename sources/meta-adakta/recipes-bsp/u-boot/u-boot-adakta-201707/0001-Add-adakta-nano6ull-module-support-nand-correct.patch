@@ -1,7 +1,7 @@
-From 2ce8d71e96481905d45516da38983921da8aca55 Mon Sep 17 00:00:00 2001
+From 063c5911c8bf678a308404bf21aaac77c29b9e67 Mon Sep 17 00:00:00 2001
 From: root <monkeyhouse@mail.ru>
 Date: Mon, 15 Jan 2018 16:25:06 +0300
-Subject: [PATCH] Add adakta nano6ull module support+nand correct
+Subject: [PATCH] Add-adakta-nano6ull-module-support-nand-correct
 
 ---
  arch/arm/cpu/armv7/mx6/Kconfig                    |    8 +
@@ -12,15 +12,19 @@ Subject: [PATCH] Add adakta nano6ull module support+nand correct
  board/freescale/adakta_nano6ull/Makefile          |    6 +
  board/freescale/adakta_nano6ull/README            |   32 +
  board/freescale/adakta_nano6ull/adakta_nano6ull.c |  851 +++++++++++++++++
+ board/freescale/adakta_nano6ull/ddr3_256m.cfg     |  116 +++
+ board/freescale/adakta_nano6ull/ddr3_512m.cfg     |  116 +++
  configs/adakta_nano6ull_defconfig                 | 1025 +++++++++++++++++++++
  include/configs/adakta_nano6ull.h                 |  258 ++++++
- 10 files changed, 2441 insertions(+), 1 deletion(-)
+ 12 files changed, 2673 insertions(+), 1 deletion(-)
  create mode 100644 arch/arm/dts/adakta_nano6ull.dts
  create mode 100644 board/freescale/adakta_nano6ull/Kconfig
  create mode 100644 board/freescale/adakta_nano6ull/MAINTAINERS
  create mode 100644 board/freescale/adakta_nano6ull/Makefile
  create mode 100644 board/freescale/adakta_nano6ull/README
  create mode 100644 board/freescale/adakta_nano6ull/adakta_nano6ull.c
+ create mode 100644 board/freescale/adakta_nano6ull/ddr3_256m.cfg
+ create mode 100644 board/freescale/adakta_nano6ull/ddr3_512m.cfg
  create mode 100644 configs/adakta_nano6ull_defconfig
  create mode 100644 include/configs/adakta_nano6ull.h
 
@@ -1247,9 +1251,253 @@ index 0000000..a6e0074
 +	board_init_r(NULL, 0);
 +}
 +#endif
+diff --git a/board/freescale/adakta_nano6ull/ddr3_256m.cfg b/board/freescale/adakta_nano6ull/ddr3_256m.cfg
+new file mode 100644
+index 0000000..00f8dce
+--- /dev/null
++++ b/board/freescale/adakta_nano6ull/ddr3_256m.cfg
+@@ -0,0 +1,116 @@
++/*
++ * Copyright (C) 2016 Freescale Semiconductor, Inc.
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ *
++ * Refer doc/README.imximage for more details about how-to configure
++ * and create imximage boot image
++ *
++ * The syntax is taken as close as possible with the kwbimage
++ */
++
++#define __ASSEMBLY__
++#include <config.h>
++
++/* image version */
++
++IMAGE_VERSION 2
++
++/*
++ * Boot Device : one of
++ * spi/sd/nand/onenand, qspi/nor
++ */
++
++#ifdef CONFIG_QSPI_BOOT
++BOOT_FROM	qspi
++#elif defined(CONFIG_NOR_BOOT)
++BOOT_FROM	nor
++#else
++BOOT_FROM	sd
++#endif
++
++#ifdef CONFIG_USE_IMXIMG_PLUGIN
++/*PLUGIN    plugin-binary-file    IRAM_FREE_START_ADDR*/
++PLUGIN	board/freescale/mx6ullevk/plugin.bin 0x00907000
++#else
++
++#ifdef CONFIG_SECURE_BOOT
++CSF CONFIG_CSF_SIZE
++#endif
++
++/*
++ * Device Configuration Data (DCD)
++ *
++ * Each entry must have the format:
++ * Addr-type           Address        Value
++ *
++ * where:
++ *	Addr-type register length (1,2 or 4 bytes)
++ *	Address	  absolute address of the register
++ *	value	  value to be stored in the register
++ */
++
++/* Enable all clocks */
++DATA 4 0x020c4068 0xffffffff
++DATA 4 0x020c406c 0xffffffff
++DATA 4 0x020c4070 0xffffffff
++DATA 4 0x020c4074 0xffffffff
++DATA 4 0x020c4078 0xffffffff
++DATA 4 0x020c407c 0xffffffff
++DATA 4 0x020c4080 0xffffffff
++
++DATA 4 0x020E04B4 0x000C0000
++DATA 4 0x020E04AC 0x00000000
++DATA 4 0x020E027C 0x00000030
++DATA 4 0x020E0250 0x00000030
++DATA 4 0x020E024C 0x00000030
++DATA 4 0x020E0490 0x00000030
++DATA 4 0x020E0288 0x000C0030
++DATA 4 0x020E0270 0x00000000
++DATA 4 0x020E0260 0x00000030
++DATA 4 0x020E0264 0x00000030
++DATA 4 0x020E04A0 0x00000030
++DATA 4 0x020E0494 0x00020000
++DATA 4 0x020E0280 0x00000030
++DATA 4 0x020E0284 0x00000030
++DATA 4 0x020E04B0 0x00020000
++DATA 4 0x020E0498 0x00000030
++DATA 4 0x020E04A4 0x00000030
++DATA 4 0x020E0244 0x00000030
++DATA 4 0x020E0248 0x00000030
++DATA 4 0x021B001C 0x00008000
++DATA 4 0x021B0800 0xA1390003
++DATA 4 0x021B080C 0x00000004
++DATA 4 0x021B083C 0x41640158
++DATA 4 0x021B0848 0x40403237
++DATA 4 0x021B0850 0x40403C33
++DATA 4 0x021B081C 0x33333333
++DATA 4 0x021B0820 0x33333333
++DATA 4 0x021B082C 0xf3333333
++DATA 4 0x021B0830 0xf3333333
++DATA 4 0x021B08C0 0x00944009
++DATA 4 0x021B08b8 0x00000800
++DATA 4 0x021B0004 0x0002002D
++DATA 4 0x021B0008 0x1B333030
++DATA 4 0x021B000C 0x676B52F3
++DATA 4 0x021B0010 0xB66D0B63
++DATA 4 0x021B0014 0x01FF00DB
++DATA 4 0x021B0018 0x00201740
++DATA 4 0x021B001C 0x00008000
++DATA 4 0x021B002C 0x000026D2
++DATA 4 0x021B0030 0x006B1023
++DATA 4 0x021B0040 0x0000004F
++DATA 4 0x021B0000 0x83180000
++DATA 4 0x021B0890 0x00400000
++DATA 4 0x021B001C 0x02008032
++DATA 4 0x021B001C 0x00008033
++DATA 4 0x021B001C 0x00048031
++DATA 4 0x021B001C 0x15208030
++DATA 4 0x021B001C 0x04008040
++DATA 4 0x021B0020 0x00000800
++DATA 4 0x021B0818 0x00000227
++DATA 4 0x021B0004 0x0002552D
++DATA 4 0x021B0404 0x00011006
++DATA 4 0x021B001C 0x00000000
++
++#endif
+diff --git a/board/freescale/adakta_nano6ull/ddr3_512m.cfg b/board/freescale/adakta_nano6ull/ddr3_512m.cfg
+new file mode 100644
+index 0000000..80cb038
+--- /dev/null
++++ b/board/freescale/adakta_nano6ull/ddr3_512m.cfg
+@@ -0,0 +1,116 @@
++/*
++ * Copyright (C) 2016 Freescale Semiconductor, Inc.
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ *
++ * Refer doc/README.imximage for more details about how-to configure
++ * and create imximage boot image
++ *
++ * The syntax is taken as close as possible with the kwbimage
++ */
++
++#define __ASSEMBLY__
++#include <config.h>
++
++/* image version */
++
++IMAGE_VERSION 2
++
++/*
++ * Boot Device : one of
++ * spi/sd/nand/onenand, qspi/nor
++ */
++
++#ifdef CONFIG_QSPI_BOOT
++BOOT_FROM	qspi
++#elif defined(CONFIG_NOR_BOOT)
++BOOT_FROM	nor
++#else
++BOOT_FROM	sd
++#endif
++
++#ifdef CONFIG_USE_IMXIMG_PLUGIN
++/*PLUGIN    plugin-binary-file    IRAM_FREE_START_ADDR*/
++PLUGIN	board/freescale/mx6ullevk/plugin.bin 0x00907000
++#else
++
++#ifdef CONFIG_SECURE_BOOT
++CSF CONFIG_CSF_SIZE
++#endif
++
++/*
++ * Device Configuration Data (DCD)
++ *
++ * Each entry must have the format:
++ * Addr-type           Address        Value
++ *
++ * where:
++ *	Addr-type register length (1,2 or 4 bytes)
++ *	Address	  absolute address of the register
++ *	value	  value to be stored in the register
++ */
++
++/* Enable all clocks */
++DATA 4 0x020c4068 0xffffffff
++DATA 4 0x020c406c 0xffffffff
++DATA 4 0x020c4070 0xffffffff
++DATA 4 0x020c4074 0xffffffff
++DATA 4 0x020c4078 0xffffffff
++DATA 4 0x020c407c 0xffffffff
++DATA 4 0x020c4080 0xffffffff
++
++DATA 4 0x020E04B4 0x000C0000
++DATA 4 0x020E04AC 0x00000000
++DATA 4 0x020E027C 0x00000030
++DATA 4 0x020E0250 0x00000030
++DATA 4 0x020E024C 0x00000030
++DATA 4 0x020E0490 0x00000030
++DATA 4 0x020E0288 0x000C0030
++DATA 4 0x020E0270 0x00000000
++DATA 4 0x020E0260 0x00000030
++DATA 4 0x020E0264 0x00000030
++DATA 4 0x020E04A0 0x00000030
++DATA 4 0x020E0494 0x00020000
++DATA 4 0x020E0280 0x00000030
++DATA 4 0x020E0284 0x00000030
++DATA 4 0x020E04B0 0x00020000
++DATA 4 0x020E0498 0x00000030
++DATA 4 0x020E04A4 0x00000030
++DATA 4 0x020E0244 0x00000030
++DATA 4 0x020E0248 0x00000030
++DATA 4 0x021B001C 0x00008000
++DATA 4 0x021B0800 0xA1390003
++DATA 4 0x021B080C 0x00000004
++DATA 4 0x021B083C 0x41640158
++DATA 4 0x021B0848 0x40403237
++DATA 4 0x021B0850 0x40403C33
++DATA 4 0x021B081C 0x33333333
++DATA 4 0x021B0820 0x33333333
++DATA 4 0x021B082C 0xf3333333
++DATA 4 0x021B0830 0xf3333333
++DATA 4 0x021B08C0 0x00944009
++DATA 4 0x021B08b8 0x00000800
++DATA 4 0x021B0004 0x0002002D
++DATA 4 0x021B0008 0x1B333030
++DATA 4 0x021B000C 0x676B52F3
++DATA 4 0x021B0010 0xB66D0B63
++DATA 4 0x021B0014 0x01FF00DB
++DATA 4 0x021B0018 0x00201740
++DATA 4 0x021B001C 0x00008000
++DATA 4 0x021B002C 0x000026D2
++DATA 4 0x021B0030 0x006B1023
++DATA 4 0x021B0040 0x0000004F
++DATA 4 0x021B0000 0x84180000
++DATA 4 0x021B0890 0x00400000
++DATA 4 0x021B001C 0x02008032
++DATA 4 0x021B001C 0x00008033
++DATA 4 0x021B001C 0x00048031
++DATA 4 0x021B001C 0x15208030
++DATA 4 0x021B001C 0x04008040
++DATA 4 0x021B0020 0x00000800
++DATA 4 0x021B0818 0x00000227
++DATA 4 0x021B0004 0x0002552D
++DATA 4 0x021B0404 0x00011006
++DATA 4 0x021B001C 0x00000000
++
++#endif
 diff --git a/configs/adakta_nano6ull_defconfig b/configs/adakta_nano6ull_defconfig
 new file mode 100644
-index 0000000..e9b0499
+index 0000000..76ff0e0
 --- /dev/null
 +++ b/configs/adakta_nano6ull_defconfig
 @@ -0,0 +1,1025 @@
@@ -1541,7 +1789,7 @@ index 0000000..e9b0499
 +# CONFIG_OF_BOARD_SETUP is not set
 +# CONFIG_OF_SYSTEM_SETUP is not set
 +CONFIG_OF_STDOUT_VIA_ALIAS=y
-+CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=board/freescale/mx6ullevk/imximage.cfg"
++CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=board/freescale/adakta_nano6ull/ddr3_256m.cfg"
 +CONFIG_ARCH_FIXUP_FDT_MEMORY=y
 +
 +#
