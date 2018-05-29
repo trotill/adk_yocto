@@ -7,9 +7,10 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/${P}:${THISDIR}/${P}-${KERNEL_DEFCONFIG_T
 
 SUMMARY = "Linux kernel for Nano6ULL additions"
 
+
 SRC_URI += "file://defconfig \
-		   file://0001-Add-adakta-nano6ull-support.patch \
-		   file://0002-Switch-NAND-to-legacy-ecc-mode.patch \
+		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "adakta_nano6ull", "file://0001-Add-adakta-nano6ull-support.patch" , "", d)} \
+		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "adakta_nano6ull", "file://0002-Switch-NAND-to-legacy-ecc-mode.patch" , "", d)} \
 "
 
 COMPATIBLE_MACHINE = "(adakta_nano6ull)"
