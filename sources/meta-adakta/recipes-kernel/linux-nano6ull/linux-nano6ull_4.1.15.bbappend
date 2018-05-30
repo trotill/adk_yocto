@@ -6,7 +6,7 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/${P}:${THISDIR}/${P}-${KERNEL_DEFCONFIG_T
 #bbwarn FILESEXTRAPATHS_prepend ${FILESEXTRAPATHS_prepend}
 
 SUMMARY = "Linux kernel for Nano6ULL additions"
-
+#KERNEL_DEFCONFIG_TYPE = "adakta_nano6ull"
 
 SRC_URI += "file://defconfig \
 		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "adakta_nano6ull", "file://0001-Add-adakta-nano6ull-support.patch" , "", d)} \
