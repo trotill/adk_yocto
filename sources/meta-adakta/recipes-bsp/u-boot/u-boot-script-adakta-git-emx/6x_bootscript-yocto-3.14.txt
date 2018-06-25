@@ -14,17 +14,34 @@ setexpr a_reset_cause_marker ${a_base} + 0x80
 setexpr a_reset_cause	     ${a_base} + 0x84
 
 if itest.s "x" == "x${board}" ; then
-	echo "!!!! Error: Your u-boot is outdated. Please upgrade.";
-	exit;
+	#echo "!!!! Error: Your u-boot is outdated. Please upgrade.";
+	#exit;
+	board=emx
 fi
 
-if  itest.s x6DL == "x${cpu}" ; then
-		dtbname=imx6dl-emx.dtb;
+if itest.s x${dtype} == x ; then
+	setenv dtype mmc
+	echo dtype not found, select ${dtype}
+fi
+
+if itest.s x${disk} == x ; then
+	setenv disk 0
+	echo disk not found, select boot partition ${disk}
+fi
+
+if itest.s x${dtbname} == x ; then
+	if  itest.s x6DL == "x${cpu}" ; then
+		dtbname=imx6dls-emx.dtb;
 	elif itest.s x6QP == "x${cpu}" ; then
 		dtbname=imx6qp-emx.dtb;
 	else
-		dtbname=imx6qds-emx.dtb
+		dtbname=imx6qd-emx.dtb
+	fi
+	echo dtbname not found, selected DTB name ${dtbname}
+else
+	echo DTB name force ${dtbname}
 fi
+
 
 if itest.s x${bootpart} == x ; then
 	bootpart=1
