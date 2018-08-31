@@ -1,0 +1,52 @@
+diff --git a/arch/arm/boot/dts/Makefile b/arch/arm/boot/dts/Makefile
+index 53fdc8d..1ac1e14 100644
+--- a/arch/arm/boot/dts/Makefile
++++ b/arch/arm/boot/dts/Makefile
+@@ -449,7 +449,8 @@ dtb-$(CONFIG_SOC_IMX6ULL) += \
+ 	imx6ull-9x9-evk.dtb \
+ 	imx6ull-9x9-evk-btwifi.dtb \
+ 	adakta_nano6ull.dtb \
+-	adakta_nano6ull_800.dtb
++	adakta_nano6ull_800.dtb \
++	adakta_nano6ull_900.dtb
+ dtb-$(CONFIG_SOC_IMX7D) += \
+ 	imx7d-12x12-lpddr3-arm2.dtb \
+ 	imx7d-12x12-lpddr3-arm2-m4.dtb \
+diff --git a/arch/arm/boot/dts/adakta_nano6ull_900.dts b/arch/arm/boot/dts/adakta_nano6ull_900.dts
+new file mode 100644
+index 0000000..ba9304f
+--- /dev/null
++++ b/arch/arm/boot/dts/adakta_nano6ull_900.dts
+@@ -0,0 +1,31 @@
++/*
++ * Copyright (C) 2016 Freescale Semiconductor, Inc.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ */
++
++
++#include "adakta_nano6ull.dts"
++
++&cpu0 {
++	arm-supply = <&reg_arm>;
++	soc-supply = <&reg_soc>;
++	operating-points = <
++				/* kHz	uV */
++				900000	1275000
++				792000	1225000
++				528000	1175000
++				396000	1025000
++				198000	950000
++			>;
++	fsl,soc-operating-points = <
++				/* KHz	uV */
++				900000	1175000
++				792000	1175000
++				528000	1175000
++				396000	1175000
++				198000	1175000
++			>;
++};
+\ No newline at end of file
