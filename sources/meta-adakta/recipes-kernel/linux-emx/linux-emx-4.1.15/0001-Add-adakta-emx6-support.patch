@@ -1,33 +1,36 @@
-From d2116ebf758df6a34dcd7930b8a1664764c5832e Mon Sep 17 00:00:00 2001
+From e984a734732b52993cc70ecf15af47ae24f17d06 Mon Sep 17 00:00:00 2001
 From: Ilya Gorchakov <ilya.gorchakov@adakta.ru>
 Date: Tue, 30 Jan 2018 20:25:00 +0300
 Subject: [PATCH] Add adakta emx6 support
 
 ---
- arch/arm/boot/dts/Makefile                     |   5 +-
+ arch/arm/boot/dts/Makefile                     |   6 +-
  arch/arm/boot/dts/imx6dls-emx.dts              |  35 ++
  arch/arm/boot/dts/imx6dls-emx_stand.dts        |  35 ++
  arch/arm/boot/dts/imx6qd-adakta_emx.dtsi       | 734 +++++++++++++++++++++++++
  arch/arm/boot/dts/imx6qd-adakta_emx_stand.dtsi | 557 +++++++++++++++++++
+ arch/arm/boot/dts/imx6qd-emx.dts               |  45 ++
  arch/arm/boot/dts/imx6qd-emx_stand.dts         |  45 ++
- 6 files changed, 1410 insertions(+), 1 deletion(-)
+ 7 files changed, 1456 insertions(+), 1 deletion(-)
  create mode 100644 arch/arm/boot/dts/imx6dls-emx.dts
  create mode 100644 arch/arm/boot/dts/imx6dls-emx_stand.dts
  create mode 100644 arch/arm/boot/dts/imx6qd-adakta_emx.dtsi
  create mode 100644 arch/arm/boot/dts/imx6qd-adakta_emx_stand.dtsi
+ create mode 100644 arch/arm/boot/dts/imx6qd-emx.dts
  create mode 100644 arch/arm/boot/dts/imx6qd-emx_stand.dts
 
 diff --git a/arch/arm/boot/dts/Makefile b/arch/arm/boot/dts/Makefile
-index 38557db..2bdfd29 100644
+index 38557db..bda2242 100644
 --- a/arch/arm/boot/dts/Makefile
 +++ b/arch/arm/boot/dts/Makefile
-@@ -376,7 +376,10 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
+@@ -376,7 +376,11 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
  	imx6q-utc.dtb \
  	imx6q-vp.dtb \
  	imx6q-wandboard.dtb \
 -	imx6q-wandboard-revb1.dtb
 +	imx6q-wandboard-revb1.dtb \
 +	imx6dls-emx.dtb \
++	imx6qd-emx.dtb \
 +	imx6qd-emx_stand.dtb \
 +	imx6dls-emx_stand.dtb 
  dtb-$(CONFIG_SOC_IMX6SL) += \
@@ -1418,6 +1421,58 @@ index 0000000..3d4973f
 +	vmmc-supply = <&reg_3p3v>;
 +	status = "okay";
 +};
+diff --git a/arch/arm/boot/dts/imx6qd-emx.dts b/arch/arm/boot/dts/imx6qd-emx.dts
+new file mode 100644
+index 0000000..8a47bea
+--- /dev/null
++++ b/arch/arm/boot/dts/imx6qd-emx.dts
+@@ -0,0 +1,45 @@
++/* 
++ * Copyright 2017 Adakta, Inc.
++ * Copyright 2013 Boundary Devices, Inc.
++ * Copyright 2012 Freescale Semiconductor, Inc.
++ * Copyright 2011 Linaro Ltd.
++ *
++ * The code contained herein is licensed under the GNU General Public
++ * License. You may obtain a copy of the GNU General Public License
++ * Version 2 or later at the following locations:
++ *
++ * http://www.opensource.org/licenses/gpl-license.html
++ * http://www.gnu.org/copyleft/gpl.html
++ */
++
++/dts-v1/;
++
++#include <dt-bindings/interrupt-controller/irq.h>
++#include "imx6q.dtsi"
++#include "imx6qd-adakta_emx.dtsi"
++
++/ {
++	model = "Freescale i.MX6 Quad/Dual ADAKTA EMX6 Board";
++	compatible = "fsl,imx6qds-emx", "fsl,imx6q";
++};
++
++
++&hdmi_core {
++	ipu_id = <1>;
++};
++
++&ov5640_mipi {
++	ipu_id = <1>;
++	csi_id = <0>;
++};
++
++&sata {
++	status = "okay";
++};
++
++/* ov5640_mipi */
++&v4l2_cap_1 {
++	ipu_id = <1>;
++	csi_id = <0>;
++	mipi_camera = <1>;
++};
+\ No newline at end of file
 diff --git a/arch/arm/boot/dts/imx6qd-emx_stand.dts b/arch/arm/boot/dts/imx6qd-emx_stand.dts
 new file mode 100644
 index 0000000..d8fe53b
