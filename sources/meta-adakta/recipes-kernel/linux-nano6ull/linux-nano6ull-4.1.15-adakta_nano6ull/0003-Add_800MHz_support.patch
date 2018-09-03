@@ -6,17 +6,17 @@ index b49e0c4..53fdc8d 100644
  	imx6ull-14x14-evk-usb-certi.dtb \
  	imx6ull-9x9-evk.dtb \
  	imx6ull-9x9-evk-btwifi.dtb \
--	adakta_nano6ull_master.dtb
-+	adakta_nano6ull_master.dtb \
-+	adakta_nano6ull_master_800.dtb
+-	adakta_nano6ull.dtb
++	adakta_nano6ull.dtb \
++	adakta_nano6ull_800.dtb
  dtb-$(CONFIG_SOC_IMX7D) += \
  	imx7d-12x12-lpddr3-arm2.dtb \
  	imx7d-12x12-lpddr3-arm2-m4.dtb \
-diff --git a/arch/arm/boot/dts/adakta_nano6ull_master_800.dts b/arch/arm/boot/dts/adakta_nano6ull_master_800.dts
+diff --git a/arch/arm/boot/dts/adakta_nano6ull_800.dts b/arch/arm/boot/dts/adakta_nano6ull_800.dts
 new file mode 100644
 index 0000000..6a3029d
 --- /dev/null
-+++ b/arch/arm/boot/dts/adakta_nano6ull_master_800.dts
++++ b/arch/arm/boot/dts/adakta_nano6ull_800.dts
 @@ -0,0 +1,31 @@
 +/*
 + * Copyright (C) 2016 Freescale Semiconductor, Inc.
@@ -27,7 +27,7 @@ index 0000000..6a3029d
 + */
 +
 +
-+#include "adakta_nano6ull_master.dts"
++#include "adakta_nano6ull.dts"
 +
 +&cpu0 {
 +	arm-supply = <&reg_arm>;
