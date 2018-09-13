@@ -1,6 +1,6 @@
-# adk_yocto
+# ADAKTA Development Kit SDK 
 
-# Yocto distribution for ADK (ADAKTA Development Kit)
+# Yocto distribution for ADK and ADK6ull
 
 System build Linux kernel, u-boot, rootfs e.t.c.
 
@@ -21,20 +21,25 @@ How to use?
 $: git clone git@github.com:trotill/adk_yocto.git  
 $: cd adk_yocto/  
 $: git checkout origin/pyro_adk -b pyro_adk  
-$: MACHINE=adakta-adk DISTRO=fslc-x11 source setup-environment build/  
+For ADK  
+$: MACHINE=adakta-adk DISTRO=fslc-x11 source setup-environment ADK/  
+For ADK6ull  
+$: MACHINE=adakta_nano6ull DISTRO=fslc-framebuffer source setup-environment ADK6ull/  
 
 2) Create your distro or compile the demo:
 
-core-image-minimal-xfce  
+core-image-minimal-xfce (ADK only) 
 core-image-minimal  
 core-image-sato  
-core-image-x11
+core-image-x11 (ADK only)
 For example: 
 $: bitbake core-image-minimal  
 
-3) Flash build/tmp/deploy/core-image-minimal-adk.sdcard.gz to microSD card
+3) Flash ADK/tmp/deploy/core-image-minimal-adakta-adk.sdcard.gz (for ADK) or  
+     ADK6ull/tmp/deploy/core-image-minimal-adakta_nano6ull.sdcard.gz (for ADK6ull) to microSD card  
 
 3.1) Windows: You can do it by using usb-image-tools
 http://www.alexpage.de/usb-image-tool/download/  
 3.2) Linux: Use dd+gunzip  
-$: gunzip -c core-image-minimal-adk.sdcard.gz | sudo dd of=/dev/<you device> bs=4M  
+For ADK     $: gunzip -c core-image-minimal-adakta-adk.sdcard.gz | sudo dd of=/dev/<you device> bs=4M  
+For ADK6ull $: gunzip -c core-image-minimal-adakta_nano6ull.sdcard.gz | sudo dd of=/dev/<you device> bs=4M  
