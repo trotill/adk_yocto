@@ -1,0 +1,29 @@
+From deb54221e928822f78ded062c3498ba68430fd3f Mon Sep 17 00:00:00 2001
+From: Ilya Gorchakov <ilya.gorchakov@adakta.ru>
+Date: Thu, 13 Sep 2018 13:51:29 +0300
+Subject: [PATCH] Add spidev to nano6ull
+
+---
+ arch/arm/boot/dts/adakta_nano6ull.dts | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arch/arm/boot/dts/adakta_nano6ull.dts b/arch/arm/boot/dts/adakta_nano6ull.dts
+index 385d69f..c75bb3f 100644
+--- a/arch/arm/boot/dts/adakta_nano6ull.dts
++++ b/arch/arm/boot/dts/adakta_nano6ull.dts
+@@ -79,6 +79,12 @@
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_ecspi2_0>;
+ 	status = "okay";
++	spidev0: spidev@1 {
++		status = "okay";
++		compatible = "spidev";
++		spi-max-frequency = <50000000>;
++		reg = <0>;
++	};
+ };
+ 
+ &flexcan1 {
+-- 
+2.7.4
+

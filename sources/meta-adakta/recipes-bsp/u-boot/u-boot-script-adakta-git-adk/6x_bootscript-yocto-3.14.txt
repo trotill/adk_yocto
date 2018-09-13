@@ -20,13 +20,16 @@ fi
 
 if itest.s "x" == "x${dtbname}" ; then
 	if  itest.s x6DL == "x${cpu}" ; then
-		dtbname=imx6dl-${board}.dtb;
+		dtbname=imx6dls-adk.dtb;
 	elif itest.s x6QP == "x${cpu}" ; then
-		dtbname=imx6qp-${board}.dtb;
+		dtbname=imx6qp-adk.dtb;
 	else
-		dtbname=imx6qds-${board}.dtb;
+		dtbname=imx6qd-adk.dtb;
 	fi
+	echo "For change DTB set dtbname variable (setenv dtbname <you_dts.dtb>)!!!"
 fi
+
+echo "select DTS" ${dtbname}	
 
 if itest.s x${bootpart} == x ; then
 	bootpart=1
