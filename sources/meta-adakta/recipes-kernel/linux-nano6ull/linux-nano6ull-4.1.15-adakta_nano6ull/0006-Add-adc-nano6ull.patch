@@ -1,0 +1,38 @@
+diff --git a/arch/arm/boot/dts/adakta_nano6ull.dts b/arch/arm/boot/dts/adakta_nano6ull.dts
+index c75bb3f..5270de0 100644
+--- a/arch/arm/boot/dts/adakta_nano6ull.dts
++++ b/arch/arm/boot/dts/adakta_nano6ull.dts
+@@ -27,6 +27,20 @@
+ 		compatible = "fsl,imx6ul-pxp-v4l2", "fsl,imx6sx-pxp-v4l2", "fsl,imx6sl-pxp-v4l2";
+ 		status = "okay";
+ 	};
++	
++	regulators {
++		compatible = "simple-bus";
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		reg_vref_3v3: regulator@2 {
++			compatible = "regulator-fixed";
++			regulator-name = "vref-3V3";
++			regulator-min-microvolt = <3300000>;
++			regulator-max-microvolt = <3300000>;
++		};
++		
++	};
+ };
+ 
+ &cpu0 {
+@@ -323,10 +337,12 @@
+ 	status = "okay";
+ };
+ 
++
+ &adc1 {
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_adc1>;
+-/*	vref-supply = <&reg_vref_3v3>; */
++	vref-supply = <&reg_vref_3v3>; 
++	num-channels = <10>;
+ 	status = "okay";
+ };
