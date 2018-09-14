@@ -29,17 +29,18 @@ $: MACHINE=adakta_nano6ull DISTRO=fslc-framebuffer source setup-environment ADK6
 2) Create your distro or compile the demo:
 
 core-image-minimal-xfce (ADK only)  
+core-image-adakta-net  
 core-image-minimal  
 core-image-sato  
 core-image-x11 (ADK only)  
 For example: 
-$: bitbake core-image-minimal  
+$: bitbake core-image-adakta-net  
 
-3) Flash ADK/tmp/deploy/core-image-minimal-adakta-adk.sdcard.gz (for ADK) or  
-     ADK6ull/tmp/deploy/core-image-minimal-adakta_nano6ull.sdcard.gz (for ADK6ull) to microSD card  
+3) Flash ADK/tmp/deploy/core-image-adakta-net-adakta-adk.sdcard.gz (for ADK) or  
+     ADK6ull/tmp/deploy/core-image-adakta-net-adakta_nano6ull.sdcard.gz (for ADK6ull) to microSD card  
 
 3.1) Windows: You can do it by using usb-image-tools
 http://www.alexpage.de/usb-image-tool/download/  
 3.2) Linux: Use dd+gunzip  
-For ADK     $: gunzip -c core-image-minimal-adakta-adk.sdcard.gz | sudo dd of=/dev/<you device> bs=4M  
-For ADK6ull $: gunzip -c core-image-minimal-adakta_nano6ull.sdcard.gz | sudo dd of=/dev/<you device> bs=4M  
+For ADK     $: gunzip -c core-image-adakta-net-adakta-adk.sdcard.gz | sudo dd of=/dev/<you device> bs=4M  
+For ADK6ull $: gunzip -c core-image-adakta-net-adakta_nano6ull.sdcard.gz | sudo dd of=/dev/<you device> bs=4M  
