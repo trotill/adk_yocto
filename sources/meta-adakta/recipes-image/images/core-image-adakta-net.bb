@@ -17,5 +17,5 @@ inherit core-image
 
 IMAGE_FEATURES +="ssh-server-openssh"
 
-CORE_IMAGE_EXTRA_INSTALL += "usb-modeswitch usb-modeswitch-data dnsmasq lsof usbutils pciutils proftpd curl wireless-tools  iptables iproute2 tcpdump ppp screen libnl mtd-utils mtd-utils-ubifs mtd-utils-jffs2 mtd-utils-misc jsoncpp bridge-utils psmisc sysstat coreutils ntp net-snmp net-snmp-server openvpn xl2tpd strongswan ppp-l2tp ppp-minconn ppp-password ppp-radius ppp-tools ppp-oa ppp-oe ppp-winbind pptp-linux" 
+CORE_IMAGE_EXTRA_INSTALL += "usb-modeswitch usb-modeswitch-data dnsmasq lsof usbutils pciutils proftpd curl wireless-tools iptables iproute2 tcpdump ppp screen libnl mtd-utils mtd-utils-ubifs mtd-utils-jffs2 mtd-utils-misc jsoncpp bridge-utils psmisc sysstat coreutils ntp net-snmp net-snmp-server openvpn xl2tpd strongswan ppp-l2tp ppp-minconn ppp-password ppp-radius ppp-tools ppp-oa ppp-oe ppp-winbind pptp-linux i2c-tools spitools" 
 
