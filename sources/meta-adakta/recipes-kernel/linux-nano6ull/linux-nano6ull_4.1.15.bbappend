@@ -15,6 +15,8 @@ SRC_URI += "file://defconfig \
 		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "adakta_nano6ull", "file://0004-Add_900MHz_support.patch" , "", d)} \
 		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "adakta_nano6ull", "file://0005-Add-spidev-to-nano6ull.patch" , "", d)} \
 		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "adakta_nano6ull", "file://0006-Add-adc-nano6ull.patch" , "", d)} \
+		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "adakta_nano6ull_stand", "file://ksz8081rna.patch" , "", d)} \
+		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "adakta_nano6ull_stand", "file://git" , "", d)} \
 "
 
 COMPATIBLE_MACHINE = "(adakta_nano6ull)"

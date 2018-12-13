@@ -32,6 +32,7 @@ typedef struct sGlobalVar
 	bool TestUsb0;
 	bool TestUsb1;
 	bool TestEmmc;
+	bool TestNand;
 	char EmmcDev[20];
 	char SataDev[20];
 	u32 progress;
@@ -39,11 +40,19 @@ typedef struct sGlobalVar
 
 extern sGlobalVar sGV;
 
+
+typedef struct sGlobalVarString{
+	string tty_port;
+}sGlobalVarString;
+
+extern sGlobalVarString sGVstr;
+
 string string_format(const std::string fmt, ...);
 void printhex(u8 * buf,u32 len,u16 loop);
 string BashResult(char* cmd,char* args);;
 eErrorTp Eth_test(stringstream  & result);
 eErrorTp USB_test(stringstream  & result);
+eErrorTp Nand_test(stringstream  & result);
 eErrorTp Pcie_test(stringstream  & result);
 eErrorTp Sata_test(stringstream  & result);
 eErrorTp Emmc_test(stringstream  & result);

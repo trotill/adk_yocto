@@ -269,6 +269,8 @@ int main(int argc, char *argv[])
 		g.SetLED(sGV.progress++,1);
 	if ((sGV.TestPcie)&&(Pcie_test(msg)==ERROR)) err=ERROR;
 		g.SetLED(sGV.progress++,1);
+	if ((sGV.TestNand)&&(Nand_test(msg)==ERROR)) err=ERROR;
+		g.SetLED(sGV.progress++,1);
 
 	if (err==ERROR)
 		err_level=1;

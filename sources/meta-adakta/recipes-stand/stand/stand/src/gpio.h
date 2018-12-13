@@ -19,16 +19,16 @@ class gpio: public fragfifo{
 	gpio(void)
 	{
 
-		string port="/dev/ttymxc2";
-		TTYC=new TTYclass(port,115200,1);
+		//string port="/dev/ttymxc2";
+		TTYC=new TTYclass(sGVstr.tty_port,115200,1);
 		if (TTYC->glbERROR==ERROR)
 		{
 			TTYC->comfd=-1;
-			printf("Error not open uart %s\n",port.c_str());
+			printf("Error not open uart %s\n",sGVstr.tty_port.c_str());
 		}
 		else
 		{
-			printf("Success open uart %s!!!\n",port.c_str());
+			printf("Success open uart %s!!!\n",sGVstr.tty_port.c_str());
 		}
 
 

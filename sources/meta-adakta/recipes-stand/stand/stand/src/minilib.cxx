@@ -7,7 +7,7 @@
 #include "minilib.h"
 #include <json/json.h>
 sGlobalVar sGV;
-
+sGlobalVarString sGVstr;
 
 eErrorTp SearchFile(const char * fname)
 {
@@ -86,6 +86,16 @@ eErrorTp ReadConfig(char * ConfigName)
 	{
 		sGV.TestEmmc=true;
 		strcpy(sGV.EmmcDev,root["emmc_dev"].asCString());
+	}
+
+	if (root["nand"].asBool())
+		sGV.TestNand=true;
+
+	sGVstr.tty_port="/dev/ttymxc2";
+	if (root["ttyport"].isNull()==false)
+	{
+		sGVstr.tty_port=root["ttyport"].asCString();
+		//strcpy(sGV.EmmcDev,root["emmc_dev"].asCString());
 	}
 	//printf("Val %s\n",root["gpio"][0][0].asCString());
 	return NO_ERROR;
@@ -204,6 +214,27 @@ eErrorTp Emmc_test(stringstream  & result)
 		else
 		{
 			result << "Checked: EMMC" << endl;
+		}
+
+	return err;
+}
+
+eErrorTp Nand_test(stringstream  & result)
+{
+	eErrorTp err=NO_ERROR;
+
+	result << endl << LINE_SEP << endl;
+
+	printf("Nand dev %s\n",sGV.EmmcDev);
+
+	if (BashResult(string_format("%s/test_nand.sh",SCRIPT_PATH).c_str(),"")=="0\n")
+		{
+			result << "Error: NAND not worked" << endl;
+			err=ERROR;
+		}
+		else
+		{
+			result << "Checked: NAND" << endl;
 		}
 
 	return err;

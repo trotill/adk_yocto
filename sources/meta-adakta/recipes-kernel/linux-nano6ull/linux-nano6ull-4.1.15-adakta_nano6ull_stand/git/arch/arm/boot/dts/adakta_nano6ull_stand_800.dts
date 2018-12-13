@@ -1,0 +1,31 @@
+/*
+ * Copyright (C) 2016 Freescale Semiconductor, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+
+#include "adakta_nano6ull_stand.dts"
+
+&cpu0 {
+	arm-supply = <&reg_arm>;
+	soc-supply = <&reg_soc>;
+	operating-points = <
+				/* kHz	uV */
+				//900000	1275000
+				792000	1225000
+				528000	1175000
+				396000	1025000
+				198000	950000
+			>;
+	fsl,soc-operating-points = <
+				/* KHz	uV */
+				//900000	1175000
+				792000	1175000
+				528000	1175000
+				396000	1175000
+				198000	1175000
+			>;
+};
