@@ -44,3 +44,5 @@ http://www.alexpage.de/usb-image-tool/download/
 3.2) Linux: Use dd+gunzip  
 For ADK     $: gunzip -c core-image-adakta-net-adakta-adk.sdcard.gz | sudo dd of=/dev/<you device> bs=4M  
 For ADK6ull $: gunzip -c core-image-adakta-net-adakta_nano6ull.sdcard.gz | sudo dd of=/dev/<you device> bs=4M  
+ 
+Prebuild releases, ready for use - https://github.com/trotill/adk_yocto/releases
