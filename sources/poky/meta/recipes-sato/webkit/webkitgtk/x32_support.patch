@@ -1,13 +1,22 @@
-From: Daniel Schepler <dschepler@gmail.com>
-Subject: Fix FTBFS in x32
-Bug-Debian: https://bugs.debian.org/700795
-Upstream-Status: Pending
 Signed-off-by: Christopher Larson <chris_larson@mentor.com>
-Index: webkitgtk/Source/WTF/wtf/Platform.h
+Upstream-Status: Pending
+
+From 897563a0397266d8ceb058f172e16b06419b2593 Mon Sep 17 00:00:00 2001
+From: Daniel Schepler <dschepler@gmail.com>
+Date: Mon, 26 Mar 2018 17:48:34 +0300
+Subject: [PATCH] Fix FTBFS in x32
+
 ===================================================================
---- webkitgtk.orig/Source/WTF/wtf/Platform.h
-+++ webkitgtk/Source/WTF/wtf/Platform.h
-@@ -182,8 +182,12 @@
+
+---
+ Source/WTF/wtf/Platform.h | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/Source/WTF/wtf/Platform.h b/Source/WTF/wtf/Platform.h
+index 850e298..551c047 100644
+--- a/Source/WTF/wtf/Platform.h
++++ b/Source/WTF/wtf/Platform.h
+@@ -132,7 +132,11 @@
  /* CPU(X86_64) - AMD64 / Intel64 / x86_64 64-bit */
  #if   defined(__x86_64__) \
      || defined(_M_X64)
@@ -15,8 +24,7 @@ Index: webkitgtk/Source/WTF/wtf/Platform.h
 +#define WTF_CPU_X86_64_32 1
 +#else
  #define WTF_CPU_X86_64 1
- #endif
 +#endif
- 
- /* CPU(ARM64) - Apple */
- #if (defined(__arm64__) && defined(__APPLE__)) || defined(__aarch64__)
+ #define WTF_CPU_X86_SSE2 1
+ #define WTF_CPU_KNOWN 1
+ #endif

@@ -145,6 +145,9 @@ def sdk_update(args, config, basepath, workspace):
         # Fetch manifest from server
         tmpmanifest = os.path.join(tmpsdk_dir, 'conf', 'sdk-conf-manifest')
         ret = subprocess.call("wget -q -O %s %s/conf/sdk-conf-manifest" % (tmpmanifest, updateserver), shell=True)
+        if ret != 0:
+            logger.error("Cannot dowload files from %s" % updateserver)
+            return ret
         changedfiles = check_manifest(tmpmanifest, basepath)
         if not changedfiles:
             logger.info("Already up-to-date")
@@ -155,7 +158,7 @@ def sdk_update(args, config, basepath, workspace):
         if os.path.exists(os.path.join(basepath, 'layers/.git')):
             out = subprocess.check_output("git status --porcelain", shell=True, cwd=layers_dir)
             if not out:
-                ret = subprocess.call("git fetch --all; git reset --hard", shell=True, cwd=layers_dir)
+                ret = subprocess.call("git fetch --all; git reset --hard @{u}", shell=True, cwd=layers_dir)
             else:
                 logger.error("Failed to update metadata as there have been changes made to it. Aborting.");
                 logger.error("Changed files:\n%s" % out);

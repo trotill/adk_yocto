@@ -1,1 +1,0 @@
-PACKAGECONFIG ??= "readline python"

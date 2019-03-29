@@ -3,12 +3,13 @@ SECTION = "devel"
 # Would need transfig-native for documentation if it wasn't disabled
 DEPENDS = "elfutils binutils"
 SUMMARY = "An ELF prelinking utility"
+HOMEPAGE = "http://git.yoctoproject.org/cgit.cgi/prelink-cross/about/"
 DESCRIPTION = "The prelink package contains a utility which modifies ELF shared libraries \
 and executables, so that far fewer relocations need to be resolved at \
 runtime and thus programs come up faster."
 LICENSE = "GPLv2"
 LIC_FILES_CHKSUM = "file://COPYING;md5=c93c0550bd3173f4504b2cbd8991e50b"
-SRCREV = "ef20628dd78b92e1a3123afc67b64cf010bdd9e4"
+SRCREV = "a853a5d715d84eec93aa68e8f2df26b7d860f5b2"
 PV = "1.0+git${SRCPV}"
 
 #
@@ -26,11 +27,14 @@ FILES_${PN}-cron = "${sysconfdir}/cron.daily ${sysconfdir}/default"
 
 PACKAGES =+ "${PN}-cron"
 
-SRC_URI = "git://git.yoctoproject.org/prelink-cross.git;branch=cross_prelink \
+SRC_URI = "git://git.yoctoproject.org/prelink-cross.git;branch=cross_prelink_staging \
            file://prelink.conf \
            file://prelink.cron.daily \
            file://prelink.default \
-	   file://macros.prelink"
+           file://macros.prelink \
+           file://0001-src-arch-mips.c-check-info-resolvetls-before-use-its.patch \
+"
+UPSTREAM_CHECK_COMMITS = "1"
 
 TARGET_OS_ORIG := "${TARGET_OS}"
 OVERRIDES_append = ":${TARGET_OS_ORIG}"
@@ -150,13 +154,15 @@ do_install_append () {
 	install -m 0644 ${WORKDIR}/macros.prelink ${D}${sysconfdir}/rpm/macros.prelink
 }
 
-# If we're using image-prelink, we want to skip this on the host side
-# but still do it if the package is installed on the target...
+# If we ae doing a cross install, we want to avoid prelinking.
+# Prelinking during a cross install should be handled by the image-prelink
+# bbclass.  If the user desires this to run on the target at first boot
+# they will need to create a custom boot script.
 pkg_postinst_prelink() {
 #!/bin/sh
 
 if [ "x$D" != "x" ]; then
-  ${@bb.utils.contains('USER_CLASSES', 'image-prelink', 'exit 0', 'exit 1', d)}
+  exit 0
 fi
 
 prelink -a

@@ -1,4 +1,5 @@
 import oe.path
+import oe.types
 
 class NotFoundError(bb.BBHandledException):
     def __init__(self, path):
@@ -20,6 +21,7 @@ class CmdError(bb.BBHandledException):
 
 def runcmd(args, dir = None):
     import pipes
+    import subprocess
 
     if dir:
         olddir = os.path.abspath(os.curdir)
@@ -32,9 +34,25 @@ def runcmd(args, dir = None):
         args = [ pipes.quote(str(arg)) for arg in args ]
         cmd = " ".join(args)
         # print("cmd: %s" % cmd)
-        (exitstatus, output) = oe.utils.getstatusoutput(cmd)
+        (exitstatus, output) = subprocess.getstatusoutput(cmd)
         if exitstatus != 0:
             raise CmdError(cmd, exitstatus >> 8, output)
+        if " fuzz " in output:
+            bb.warn("""
+Some of the context lines in patches were ignored. This can lead to incorrectly applied patches.
+The context lines in the patches can be updated with devtool:
+
+    devtool modify <recipe>
+    devtool finish --force-patch-refresh <recipe> <layer_path>
+
+Then the updated patches and the source tree (in devtool's workspace)
+should be reviewed to make sure the patches apply in the correct place
+and don't introduce duplicate lines (which can, and does happen
+when some of the context is ignored). Further information:
+http://lists.openembedded.org/pipermail/openembedded-core/2018-March/148675.html
+https://bugzilla.yoctoproject.org/show_bug.cgi?id=10450
+Details:
+{}""".format(output))
         return output
 
     finally:
@@ -211,7 +229,7 @@ class PatchTree(PatchSet):
         self.patches.insert(i, patch)
 
     def _applypatch(self, patch, force = False, reverse = False, run = True):
-        shellcmd = ["cat", patch['file'], "|", "patch", "-p", patch['strippath']]
+        shellcmd = ["cat", patch['file'], "|", "patch", "--no-backup-if-mismatch", "-p", patch['strippath']]
         if reverse:
             shellcmd.append('-R')
 
@@ -431,7 +449,7 @@ class GitApplyTree(PatchTree):
         import re
         tempdir = tempfile.mkdtemp(prefix='oepatch')
         try:
-            shellcmd = ["git", "format-patch", startcommit, "-o", tempdir]
+            shellcmd = ["git", "format-patch", "--no-signature", "--no-numbered", startcommit, "-o", tempdir]
             if paths:
                 shellcmd.append('--')
                 shellcmd.extend(paths)

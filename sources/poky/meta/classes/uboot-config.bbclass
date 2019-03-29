@@ -20,31 +20,28 @@ python () {
     ubootbinaries = d.getVar('UBOOT_BINARIES')
     # The "doc" varflag is special, we don't want to see it here
     ubootconfigflags.pop('doc', None)
+    ubootconfig = (d.getVar('UBOOT_CONFIG') or "").split()
 
-    if not ubootmachine and not ubootconfigflags:
+    if not ubootmachine and not ubootconfig:
         PN = d.getVar("PN")
         FILE = os.path.basename(d.getVar("FILE"))
         bb.debug(1, "To build %s, see %s for instructions on \
                  setting up your machine config" % (PN, FILE))
-        raise bb.parse.SkipPackage("Either UBOOT_MACHINE or UBOOT_CONFIG must be set in the %s machine configuration." % d.getVar("MACHINE"))
+        raise bb.parse.SkipRecipe("Either UBOOT_MACHINE or UBOOT_CONFIG must be set in the %s machine configuration." % d.getVar("MACHINE"))
 
-    if ubootmachine and ubootconfigflags:
-        raise bb.parse.SkipPackage("You cannot use UBOOT_MACHINE and UBOOT_CONFIG at the same time.")
+    if ubootmachine and ubootconfig:
+        raise bb.parse.SkipRecipe("You cannot use UBOOT_MACHINE and UBOOT_CONFIG at the same time.")
 
     if ubootconfigflags and ubootbinaries:
-        raise bb.parse.SkipPackage("You cannot use UBOOT_BINARIES as it is internal to uboot_config.bbclass.")
+        raise bb.parse.SkipRecipe("You cannot use UBOOT_BINARIES as it is internal to uboot_config.bbclass.")
 
-    if not ubootconfigflags:
-        return
-
-    ubootconfig = (d.getVar('UBOOT_CONFIG') or "").split()
     if len(ubootconfig) > 0:
         for config in ubootconfig:
             for f, v in ubootconfigflags.items():
                 if config == f: 
                     items = v.split(',')
                     if items[0] and len(items) > 3:
-                        raise bb.parse.SkipPackage('Only config,images,binary can be specified!')
+                        raise bb.parse.SkipRecipe('Only config,images,binary can be specified!')
                     d.appendVar('UBOOT_MACHINE', ' ' + items[0])
                     # IMAGE_FSTYPES appending
                     if len(items) > 1 and items[1]:
@@ -57,6 +54,4 @@ python () {
                         bb.debug(1, "Appending '%s' to UBOOT_BINARIES." % ubootbinary)
                         d.appendVar('UBOOT_BINARIES', ' ' + ubootbinary)
                     break
-    elif len(ubootconfig) == 0:
-       raise bb.parse.SkipPackage('You must set a default in UBOOT_CONFIG.')
 }

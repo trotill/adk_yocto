@@ -12,16 +12,13 @@ ODP_SOC ?= ""
 ODP_SOC_ls1043ardb = "LS1043"
 ODP_SOC_ls1046ardb = "LS1046"
 ODP_PLATFORM ?= "linux-dpaa2"
-ODP_PLATFORM_ls1043ardb = "linux-dpaa1"
-ODP_PLATFORM_ls1046ardb = "linux-dpaa1"
 ODP_BUILD_TYPE ?= "ls2088"
 ODP_BUILD_TYPE_ls1043ardb = "ls1043"
 ODP_BUILD_TYPE_ls1046ardb = "ls1046"
 ODP_BUILD_TYPE_ls2080ardb = "ls2080"
+ODP_BUILD_TYPE_ls1088ardb = "ls1088"
 
 EXTRA_OECONF = "--with-platform=${ODP_PLATFORM} \
-                --with-sdk-install-path=${STAGING_DIR_TARGET} \
-                --enable-build-type=${ODP_BUILD_TYPE} \
                 --enable-test-vald \
                 --enable-test-perf \
                 --enable-test-cpp \
@@ -29,6 +26,10 @@ EXTRA_OECONF = "--with-platform=${ODP_PLATFORM} \
 
 EXTRA_OEMAKE = "CROSS_COMPILE="${TARGET_PREFIX}" \
                 SYSROOT="${STAGING_DIR_TARGET}" \
+"
+
+CFLAGS += "-Wno-format-truncation -Wno-maybe-uninitialized -Wno-implicit-fallthrough -Wno-cpp -Wno-cast-function-type \
+          -Wno-stringop-truncation \
 "
 
 PACKAGECONFIG[perf] = "--enable-test-perf,,,"
@@ -53,7 +54,6 @@ do_install_append () {
     cp -rf ${S}/platform/linux-dpaa2/kni/*.h ${D}${includedir}/odp/kni/
     cp -rf ${S}/kern/*.h ${D}${includedir}/odp/kern/
     cp -rf ${S}/platform/linux-dpaa2/flib/mc/*.h ${D}${includedir}/odp/flib/mc/
-    cp -rf ${S}/platform/linux-dpaa2/flib/qbman/include/drivers/*.h ${D}${includedir}/odp/flib/qbman/include/drivers
 
     sed -i -e 's#platform/linux-dpaa2/##g' ${D}${includedir}/odp/kern/*.h
 }

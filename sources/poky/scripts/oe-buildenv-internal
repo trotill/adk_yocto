@@ -24,8 +24,7 @@ if ! $(return >/dev/null 2>&1) ; then
     echo 'Usage: . $OEROOT/scripts/oe-buildenv-internal &&'
     echo ''
     echo 'OpenEmbedded oe-buildenv-internal - an internal script that is'
-    echo 'used in oe-init-build-env and oe-init-build-env-memres to'
-    echo 'initialize oe build environment'
+    echo 'used in oe-init-build-env to initialize oe build environment'
     echo ''
     exit 2
 fi
@@ -41,16 +40,7 @@ if [ -z "$OE_SKIP_SDK_CHECK" ] && [ -n "$OECORE_SDK_VERSION" ]; then
     return 1
 fi
 
-# Make sure we're not using python v3.x as 'python', we don't support it.
-py_v2_check=$(/usr/bin/env python --version 2>&1 | grep "Python 3")
-if [ -n "$py_v2_check" ]; then
-    echo >&2 "OpenEmbedded requires 'python' to be python v2 (>= 2.7.3), not python v3."
-    echo >&2 "Please set up python v2 as your default 'python' interpreter."
-    return 1
-fi
-unset py_v2_check
-
-py_v27_check=$(python -c 'import sys; print sys.version_info >= (2,7,3)')
+py_v27_check=$(python2 -c 'import sys; print sys.version_info >= (2,7,3)')
 if [ "$py_v27_check" != "True" ]; then
     echo >&2 "OpenEmbedded requires 'python' to be python v2 (>= 2.7.3), not python v3."
     echo >&2 "Please upgrade your python v2."
@@ -102,10 +92,14 @@ unset BDIR
 
 if [ -z "$BITBAKEDIR" ]; then
     BITBAKEDIR="$OEROOT/bitbake$BBEXTRA"
+    test -d "$BITBAKEDIR" || BITBAKEDIR="$OEROOT/../bitbake$BBEXTRA"
 fi
 
 BITBAKEDIR=$(readlink -f "$BITBAKEDIR")
 BUILDDIR=$(readlink -f "$BUILDDIR")
+BBPATH=$BUILDDIR
+
+export BBPATH
 
 if [ ! -d "$BITBAKEDIR" ]; then
     echo >&2 "Error: The bitbake directory ($BITBAKEDIR) does not exist!  Please ensure a copy of bitbake exists at this location or specify an alternative path on the command line"

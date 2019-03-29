@@ -44,15 +44,12 @@ CPPFLAGS = "${BUILD_CPPFLAGS}"
 CFLAGS = "${BUILD_CFLAGS}"
 CXXFLAGS = "${BUILD_CXXFLAGS}"
 LDFLAGS = "${BUILD_LDFLAGS}"
-LDFLAGS_build-darwin = "-L${STAGING_LIBDIR_NATIVE} "
 
 STAGING_BINDIR = "${STAGING_BINDIR_NATIVE}"
 STAGING_BINDIR_CROSS = "${STAGING_BINDIR_NATIVE}"
 
 # native pkg doesn't need the TOOLCHAIN_OPTIONS.
 TOOLCHAIN_OPTIONS = ""
-
-DEPENDS_GETTEXT = "gettext-native"
 
 # Don't build ptest natively
 PTEST_ENABLED = "0"
@@ -80,6 +77,7 @@ exec_prefix = "${STAGING_DIR_NATIVE}${prefix_native}"
 
 bindir = "${STAGING_BINDIR_NATIVE}"
 sbindir = "${STAGING_SBINDIR_NATIVE}"
+base_libdir = "${STAGING_LIBDIR_NATIVE}"
 libdir = "${STAGING_LIBDIR_NATIVE}"
 includedir = "${STAGING_INCDIR_NATIVE}"
 sysconfdir = "${STAGING_ETCDIR_NATIVE}"
@@ -91,6 +89,7 @@ export lt_cv_sys_lib_dlsearch_path_spec = "${libdir} ${base_libdir} /lib /lib64 
 
 NATIVE_PACKAGE_PATH_SUFFIX ?= ""
 bindir .= "${NATIVE_PACKAGE_PATH_SUFFIX}"
+base_libdir .= "${NATIVE_PACKAGE_PATH_SUFFIX}"
 libdir .= "${NATIVE_PACKAGE_PATH_SUFFIX}"
 libexecdir .= "${NATIVE_PACKAGE_PATH_SUFFIX}"
 
@@ -108,7 +107,7 @@ PKG_CONFIG_SYSROOT_DIR = ""
 PKG_CONFIG_SYSTEM_LIBRARY_PATH[unexport] = "1"
 PKG_CONFIG_SYSTEM_INCLUDE_PATH[unexport] = "1"
 
-# we dont want libc-uclibc or libc-glibc to kick in for native recipes
+# we dont want libc-*libc to kick in for native recipes
 LIBCOVERRIDE = ""
 CLASSOVERRIDE = "class-native"
 MACHINEOVERRIDES = ""
@@ -129,7 +128,7 @@ python native_virtclass_handler () {
     # from modifying native distro features
     features = set(d.getVar("DISTRO_FEATURES_NATIVE").split())
     filtered = set(bb.utils.filter("DISTRO_FEATURES", d.getVar("DISTRO_FEATURES_FILTER_NATIVE"), d).split())
-    d.setVar("DISTRO_FEATURES", " ".join(features | filtered))
+    d.setVar("DISTRO_FEATURES", " ".join(sorted(features | filtered)))
 
     classextend = e.data.getVar('BBCLASSEXTEND') or ""
     if "native" not in classextend:
@@ -153,8 +152,6 @@ python native_virtclass_handler () {
             else:
                 newdeps.append(dep)
         d.setVar(varname, " ".join(newdeps))
-
-    e.data.setVar("OVERRIDES", e.data.getVar("OVERRIDES", False) + ":virtclass-native")
 
     map_dependencies("DEPENDS", e.data)
     for pkg in [e.data.getVar("PN"), "", "${PN}"]:

@@ -49,13 +49,7 @@ python __anonymous () {
 
 OVERRIDES_append = ":${TARGET_ARCH}-${TARGET_OS}"
 
-locale_base_postinst() {
-#!/bin/sh
-
-if [ "x$D" != "x" ]; then
-	exit 1
-fi
-
+locale_base_postinst_ontarget() {
 localedef --inputfile=${datadir}/i18n/locales/%s --charmap=%s %s
 }
 
@@ -113,9 +107,9 @@ python package_do_split_gconvs () {
         bb.error("datadir not defined")
         return
 
-    gconv_libdir = base_path_join(libdir, "gconv")
-    charmap_dir = base_path_join(datadir, "i18n", "charmaps")
-    locales_dir = base_path_join(datadir, "i18n", "locales")
+    gconv_libdir = oe.path.join(libdir, "gconv")
+    charmap_dir = oe.path.join(datadir, "i18n", "charmaps")
+    locales_dir = oe.path.join(datadir, "i18n", "locales")
     binary_locales_dir = d.getVar('localedir')
 
     def calc_gconv_deps(fn, pkg, file_regex, output_pattern, group):
@@ -189,7 +183,7 @@ python package_do_split_gconvs () {
 
     # Read in supported locales and associated encodings
     supported = {}
-    with open(base_path_join(d.getVar('WORKDIR'), "SUPPORTED")) as f:
+    with open(oe.path.join(d.getVar('WORKDIR'), "SUPPORTED")) as f:
         for line in f.readlines():
             try:
                 locale, charset = line.rstrip().split()
@@ -215,7 +209,7 @@ python package_do_split_gconvs () {
     def output_locale_source(name, pkgname, locale, encoding):
         d.setVar('RDEPENDS_%s' % pkgname, '%slocaledef %s-localedata-%s %s-charmap-%s' % \
         (mlprefix, mlprefix+bpn, legitimize_package_name(locale), mlprefix+bpn, legitimize_package_name(encoding)))
-        d.setVar('pkg_postinst_%s' % pkgname, d.getVar('locale_base_postinst') \
+        d.setVar('pkg_postinst_ontarget_%s' % pkgname, d.getVar('locale_base_postinst_ontarget') \
         % (locale, encoding, locale))
         d.setVar('pkg_postrm_%s' % pkgname, d.getVar('locale_base_postrm') % \
         (locale, encoding, locale))
@@ -231,12 +225,12 @@ python package_do_split_gconvs () {
     commands = {}
 
     def output_locale_binary(name, pkgname, locale, encoding):
-        treedir = base_path_join(d.getVar("WORKDIR"), "locale-tree")
-        ldlibdir = base_path_join(treedir, d.getVar("base_libdir"))
+        treedir = oe.path.join(d.getVar("WORKDIR"), "locale-tree")
+        ldlibdir = oe.path.join(treedir, d.getVar("base_libdir"))
         path = d.getVar("PATH")
-        i18npath = base_path_join(treedir, datadir, "i18n")
-        gconvpath = base_path_join(treedir, "iconvdata")
-        outputpath = base_path_join(treedir, binary_locales_dir)
+        i18npath = oe.path.join(treedir, datadir, "i18n")
+        gconvpath = oe.path.join(treedir, "iconvdata")
+        outputpath = oe.path.join(treedir, binary_locales_dir)
 
         use_cross_localedef = d.getVar("LOCALE_GENERATION_WITH_CROSS-LOCALEDEF") or "0"
         if use_cross_localedef == "1":
@@ -257,6 +251,8 @@ python package_do_split_gconvs () {
                 "mipsisa32r6el":  " --uint32-align=4 --little-endian ", \
                 "mips64el":" --uint32-align=4 --little-endian ", \
                 "mipsisa64r6el":" --uint32-align=4 --little-endian ", \
+                "riscv64": " --uint32-align=4 --little-endian ", \
+                "riscv32": " --uint32-align=4 --little-endian ", \
                 "i586":    " --uint32-align=4 --little-endian ", \
                 "i686":    " --uint32-align=4 --little-endian ", \
                 "x86_64":  " --uint32-align=4 --little-endian "  }
@@ -344,7 +340,7 @@ python package_do_split_gconvs () {
         d.appendVar('RDEPENDS_%s' % metapkg, ' ' + pkg)
 
     if use_bin == "compile":
-        makefile = base_path_join(d.getVar("WORKDIR"), "locale-tree", "Makefile")
+        makefile = oe.path.join(d.getVar("WORKDIR"), "locale-tree", "Makefile")
         m = open(makefile, "w")
         m.write("all: %s\n\n" % " ".join(commands.keys()))
         for cmd in commands:

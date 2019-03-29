@@ -1,56 +1,55 @@
 inherit native
 
-BOOTSTRAP ?= ""
+SRC_URI_append = " https://dl.google.com/go/go1.4-bootstrap-20171003.tar.gz;name=bootstrap;subdir=go1.4"
+SRC_URI[bootstrap.md5sum] = "dbf727a4b0e365bf88d97cbfde590016"
+SRC_URI[bootstrap.sha256sum] = "f4ff5b5eb3a3cae1c993723f3eab519c5bae18866b5e5f96fe1102f0cb5c3e52"
+
 export GOOS = "${BUILD_GOOS}"
 export GOARCH = "${BUILD_GOARCH}"
-export GOROOT_FINAL = "${STAGING_LIBDIR_NATIVE}/go${BOOTSTRAP}"
-export GOROOT_BOOTSTRAP = "${STAGING_LIBDIR_NATIVE}/go1.4"
-export CGO_ENABLED = "1"
+CC = "${@d.getVar('BUILD_CC').strip()}"
 
-do_configure[noexec] = "1"
+GOMAKEARGS ?= "--no-banner"
+
+do_configure() {
+	cd ${WORKDIR}/go1.4/go/src
+	CGO_ENABLED=0 GOROOT=${WORKDIR}/go1.4/go ./make.bash
+}
 
 do_compile() {
-	export GOBIN="${B}/bin"
-	rm -rf ${GOBIN}
-	mkdir ${GOBIN}
-
-	export TMPDIR=${WORKDIR}/build-tmp
-	mkdir -p ${WORKDIR}/build-tmp
+	export GOROOT_FINAL="${libdir_native}/go"
+	export GOROOT_BOOTSTRAP="${WORKDIR}/go1.4/go"
 
 	cd src
-	CGO_ENABLED=0 ./make.bash --host-only
+	./make.bash ${GOMAKEARGS}
+	cd ${B}
 }
+do_compile[dirs] =+ "${GOTMPDIR} ${B}/bin"
+do_compile[cleandirs] += "${GOTMPDIR} ${B}/bin"
 
 make_wrapper() {
 	rm -f ${D}${bindir}/$2$3
 	cat <<END >${D}${bindir}/$2$3
 #!/bin/bash
 here=\`dirname \$0\`
-export GOROOT="${GOROOT:-\`readlink -f \$here/../lib/go$3\`}"
-\$here/../lib/go$3/bin/$1 "\$@"
+export GOROOT="${GOROOT:-\`readlink -f \$here/../lib/go\`}"
+\$here/../lib/go/bin/$1 "\$@"
 END
-	chmod +x ${D}${bindir}/$2$3
+	chmod +x ${D}${bindir}/$2
 }
 
 do_install() {
-	install -d ${D}${libdir}/go${BOOTSTRAP}
-	cp -a ${B}/pkg ${D}${libdir}/go${BOOTSTRAP}/
-	install -d ${D}${libdir}/go${BOOTSTRAP}/src
+	install -d ${D}${libdir}/go
+	cp --preserve=mode,timestamps -R ${B}/pkg ${D}${libdir}/go/
+	install -d ${D}${libdir}/go/src
 	(cd ${S}/src; for d in *; do \
-		[ -d $d ] && cp -a ${S}/src/$d ${D}${libdir}/go${BOOTSTRAP}/src/; \
+		[ -d $d ] && cp -a ${S}/src/$d ${D}${libdir}/go/src/; \
 	done)
-
-	install -d ${D}${bindir} ${D}${libdir}/go${BOOTSTRAP}/bin
+	find ${D}${libdir}/go/src -depth -type d -name testdata -exec rm -rf {} \;
+	install -d ${D}${bindir} ${D}${libdir}/go/bin
 	for f in ${B}/bin/*
 	do
 		base=`basename $f`
-		install -m755 $f ${D}${libdir}/go${BOOTSTRAP}/bin
-		make_wrapper $base $base ${BOOTSTRAP}
+		install -m755 $f ${D}${libdir}/go/bin
+		make_wrapper $base $base
 	done
 }
-
-do_package[noexec] = "1"
-do_packagedata[noexec] = "1"
-do_package_write_ipk[noexec] = "1"
-do_package_write_deb[noexec] = "1"
-do_package_write_rpm[noexec] = "1"

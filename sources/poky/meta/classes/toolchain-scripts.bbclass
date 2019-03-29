@@ -3,7 +3,6 @@ inherit toolchain-scripts-base siteinfo kernel-arch
 # We want to be able to change the value of MULTIMACH_TARGET_SYS, because it
 # doesn't always match our expectations... but we default to the stock value
 REAL_MULTIMACH_TARGET_SYS ?= "${MULTIMACH_TARGET_SYS}"
-TARGET_CC_ARCH_append_libc-uclibc = " -muclibc"
 TARGET_CC_ARCH_append_libc-musl = " -mmusl"
 
 # default debug prefix map isn't valid in the SDK
@@ -25,6 +24,21 @@ toolchain_create_sdk_env_script () {
 	script=${1:-${SDK_OUTPUT}/${SDKPATH}/environment-setup-$multimach_target_sys}
 	rm -f $script
 	touch $script
+
+	echo '# Check for LD_LIBRARY_PATH being set, which can break SDK and generally is a bad practice' >> $script
+	echo '# http://tldp.org/HOWTO/Program-Library-HOWTO/shared-libraries.html#AEN80' >> $script
+	echo '# http://xahlee.info/UnixResource_dir/_/ldpath.html' >> $script
+	echo '# Only disable this check if you are absolutely know what you are doing!' >> $script
+	echo 'if [ ! -z "$LD_LIBRARY_PATH" ]; then' >> $script
+	echo "    echo \"Your environment is misconfigured, you probably need to 'unset LD_LIBRARY_PATH'\"" >> $script
+	echo "    echo \"but please check why this was set in the first place and that it's safe to unset.\"" >> $script
+	echo '    echo "The SDK will not operate correctly in most cases when LD_LIBRARY_PATH is set."' >> $script
+	echo '    echo "For more references see:"' >> $script
+	echo '    echo "  http://tldp.org/HOWTO/Program-Library-HOWTO/shared-libraries.html#AEN80"' >> $script
+	echo '    echo "  http://xahlee.info/UnixResource_dir/_/ldpath.html"' >> $script
+	echo '    return 1' >> $script
+	echo 'fi' >> $script
+
 	echo 'export SDKTARGETSYSROOT='"$sysroot" >> $script
 	EXTRAPATH=""
 	for i in ${CANADIANEXTRAOS}; do
@@ -37,6 +51,10 @@ toolchain_create_sdk_env_script () {
 	echo "export OECORE_NATIVE_SYSROOT=\"$sdkpathnative\"" >> $script
 	echo 'export OECORE_TARGET_SYSROOT="$SDKTARGETSYSROOT"' >> $script
 	echo "export OECORE_ACLOCAL_OPTS=\"-I $sdkpathnative/usr/share/aclocal\"" >> $script
+	echo 'export OECORE_BASELIB="${baselib}"' >> $script
+	echo 'export OECORE_TARGET_ARCH="${TARGET_ARCH}"' >>$script
+	echo 'export OECORE_TARGET_OS="${TARGET_OS}"' >>$script
+
 	echo 'unset command_not_found_handle' >> $script
 
 	toolchain_shared_env_script
@@ -48,7 +66,8 @@ toolchain_create_tree_env_script () {
 	script=${TMPDIR}/environment-setup-${REAL_MULTIMACH_TARGET_SYS}
 	rm -f $script
 	touch $script
-	echo 'export PATH=${STAGING_DIR_NATIVE}/usr/bin:${PATH}' >> $script
+	echo 'orig=`pwd`; cd ${COREBASE}; . ./oe-init-build-env ${TOPDIR}; cd $orig' >> $script
+	echo 'export PATH=${STAGING_DIR_NATIVE}/usr/bin:${STAGING_BINDIR_TOOLCHAIN}:$PATH' >> $script
 	echo 'export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR}' >> $script
 	echo 'export PKG_CONFIG_PATH=${PKG_CONFIG_PATH}' >> $script
 	echo 'export CONFIG_SITE="${@siteinfo_get_files(d)}"' >> $script
@@ -98,6 +117,41 @@ if [ -d "\$OECORE_NATIVE_SYSROOT/environment-setup.d" ]; then
     for envfile in \$OECORE_NATIVE_SYSROOT/environment-setup.d/*.sh; do
 	    . \$envfile
     done
+fi
+EOF
+}
+
+toolchain_create_post_relocate_script() {
+	relocate_script=$1
+	env_dir=$2
+	rm -f $relocate_script
+	touch $relocate_script
+
+	cat >> $relocate_script <<EOF
+if [ -d "${SDKPATHNATIVE}/post-relocate-setup.d/" ]; then
+	# Source top-level SDK env scripts in case they are needed for the relocate
+	# scripts.
+	for env_setup_script in ${env_dir}/environment-setup-*; do
+		. \$env_setup_script
+		status=\$?
+		if [ \$status != 0 ]; then
+			echo "\$0: Failed to source \$env_setup_script with status \$status"
+			exit \$status
+		fi
+
+		for s in ${SDKPATHNATIVE}/post-relocate-setup.d/*; do
+			if [ ! -x \$s ]; then
+				continue
+			fi
+			\$s "\$1"
+			status=\$?
+			if [ \$status != 0 ]; then
+				echo "post-relocate command \"\$s \$1\" failed with status \$status" >&2
+				exit \$status
+			fi
+		done
+	done
+	rm -rf "${SDKPATHNATIVE}/post-relocate-setup.d"
 fi
 EOF
 }

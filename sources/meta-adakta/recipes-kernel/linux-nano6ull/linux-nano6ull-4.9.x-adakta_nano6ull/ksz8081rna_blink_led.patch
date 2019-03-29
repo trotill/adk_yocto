@@ -1,0 +1,13 @@
+diff --git a/arch/arm/mach-imx/mach-imx6ul.c b/arch/arm/mach-imx/mach-imx6ul.c
+index 851034d..797c3c0 100644
+--- a/arch/arm/mach-imx/mach-imx6ul.c
++++ b/arch/arm/mach-imx/mach-imx6ul.c
+@@ -40,7 +40,7 @@ static int ksz8081_phy_fixup(struct phy_device *dev)
+ 		phy_write(dev, 0x1f, 0x8110);
+ 		phy_write(dev, 0x16, 0x201);
+ 	} else if (dev && dev->interface == PHY_INTERFACE_MODE_RMII) {
+-		phy_write(dev, 0x1f, 0x8190);
++		phy_write(dev, 0x1f, 0x8180);
+ 		phy_write(dev, 0x16, 0x202);
+ 	}
+ 

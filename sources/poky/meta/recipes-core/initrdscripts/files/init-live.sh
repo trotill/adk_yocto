@@ -84,6 +84,10 @@ boot_live_root() {
     # device node creation events were handled, to avoid unexpected behavior
     killall -9 "${_UDEV_DAEMON##*/}" 2>/dev/null
 
+    # Don't run systemd-update-done on systemd-based live systems
+    # because it triggers a slow rebuild of ldconfig caches.
+    touch ${ROOT_MOUNT}/etc/.updated ${ROOT_MOUNT}/var/.updated
+
     # Allow for identification of the real root even after boot
     mkdir -p  ${ROOT_MOUNT}/media/realroot
     mount -n --move "/run/media/${ROOT_DISK}" ${ROOT_MOUNT}/media/realroot
@@ -91,8 +95,11 @@ boot_live_root() {
     # Move the mount points of some filesystems over to
     # the corresponding directories under the real root filesystem.
     for dir in `awk '/\/dev.* \/run\/media/{print $2}' /proc/mounts`; do
-        mkdir -p  ${ROOT_MOUNT}/media/${dir##*/}
-        mount -n --move $dir ${ROOT_MOUNT}/media/${dir##*/}
+        # Parse any OCT or HEX encoded chars such as spaces
+        # in the mount points to actual ASCII chars
+        dir=`printf $dir`
+        mkdir -p "${ROOT_MOUNT}/media/${dir##*/}"
+        mount -n --move "$dir" "${ROOT_MOUNT}/media/${dir##*/}"
     done
     mount -n --move /proc ${ROOT_MOUNT}/proc
     mount -n --move /sys ${ROOT_MOUNT}/sys

@@ -76,10 +76,11 @@ class Hg(FetchMethod):
         # Create paths to mercurial checkouts
         hgsrcname = '%s_%s_%s' % (ud.module.replace('/', '.'), \
                             ud.host, ud.path.replace('/', '.'))
-        ud.mirrortarball = 'hg_%s.tar.gz' % hgsrcname
-        ud.fullmirror = os.path.join(d.getVar("DL_DIR"), ud.mirrortarball)
+        mirrortarball = 'hg_%s.tar.gz' % hgsrcname
+        ud.fullmirror = os.path.join(d.getVar("DL_DIR"), mirrortarball)
+        ud.mirrortarballs = [mirrortarball]
 
-        hgdir = d.getVar("HGDIR") or (d.getVar("DL_DIR") + "/hg/")
+        hgdir = d.getVar("HGDIR") or (d.getVar("DL_DIR") + "/hg")
         ud.pkgdir = os.path.join(hgdir, hgsrcname)
         ud.moddir = os.path.join(ud.pkgdir, ud.module)
         ud.localfile = ud.moddir

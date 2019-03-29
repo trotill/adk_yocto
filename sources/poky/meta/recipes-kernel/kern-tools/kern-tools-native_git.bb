@@ -4,7 +4,7 @@ LIC_FILES_CHKSUM = "file://git/tools/kgit;beginline=5;endline=9;md5=a6c2fa8aef1b
 
 DEPENDS = "git-native"
 
-SRCREV = "bd7447cd6274d764a129dcdc246cdbfd8c47b991"
+SRCREV = "d6529f86fc5bcb3514953ff9fa2f51a3fbf03a0f"
 PR = "r12"
 PV = "0.2+git${SRCPV}"
 
@@ -12,6 +12,7 @@ inherit native
 
 SRC_URI = "git://git.yoctoproject.org/yocto-kernel-tools.git"
 S = "${WORKDIR}"
+UPSTREAM_CHECK_COMMITS = "1"
 
 do_compile() { 
 	:

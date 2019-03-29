@@ -86,12 +86,8 @@ RDEPENDS_packagegroup-core-full-cmdline-utils = "\
     mc-fish \
     mc-helpers \
     mc-helpers-perl \
-    mc-helpers-python \
-    mktemp \
     ncurses \
     net-tools \
-    pax \
-    popt \
     procps \
     psmisc \
     sed \
@@ -110,7 +106,6 @@ RDEPENDS_packagegroup-core-full-cmdline-extended = "\
     "
 
 RDEPENDS_packagegroup-core-full-cmdline-dev-utils = "\
-    byacc \
     diffutils \
     m4 \
     make \
@@ -130,31 +125,17 @@ RDEPENDS_packagegroup-core-full-cmdline-initscripts = "\
     "
 
 RDEPENDS_packagegroup-core-full-cmdline-multiuser = "\
+    bzip2 \
     cracklib \
     gzip \
-    ${@bb.utils.contains('DISTRO_FEATURES', 'pam', 'libuser', '', d)} \
     shadow \
     sudo \
     "
 
 RDEPENDS_packagegroup-core-full-cmdline-sys-services = "\
     at \
-    bzip2 \
     cronie \
-    dbus \
-    dbus-glib \
-    elfutils \
-    gzip \
-    less \
-    libcap \
-    libevent \
     logrotate \
     nfs-utils \
-    pciutils \
-    libpcre \
     rpcbind \
-    sysfsutils \
-    tcp-wrappers \
-    tzdata \
     "
-

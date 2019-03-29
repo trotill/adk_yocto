@@ -1,21 +1,22 @@
 SUMMARY = "Provides cryptographic recipes and primitives to python developers"
+HOMEPAGE = "https://cryptography.io/"
 LICENSE = "Apache-2.0 | BSD"
-LIC_FILES_CHKSUM = "file://LICENSE;md5=d5ede125ed08d4fd14ec44d334bdb388"
+LIC_FILES_CHKSUM = "file://LICENSE;md5=097f805837700cfac572ac274cd38124"
 
 DEPENDS += " \
     ${PYTHON_PN}-cffi \
     ${PYTHON_PN}-cffi-native \
-    ${PYTHON_PN}-pyasn1 \
+    ${PYTHON_PN}-asn1crypto \
     ${PYTHON_PN}-six \
 "
 
-SRC_URI[md5sum] = "fade66de437392ed1ba6980768626204"
-SRC_URI[sha256sum] = "878cb68b3da3d493ffd68f36db11c29deee623671d3287c3f8d685117ffda9a9"
+SRC_URI[md5sum] = "a0f3f563ab1c5c3bc02fae8d4aa3ad16"
+SRC_URI[sha256sum] = "c132bab45d4bd0fff1d3fe294d92b0a6eb8404e93337b3127bdec9f21de117e6"
 
 RDEPENDS_${PN} += " \
     ${PYTHON_PN}-cffi \
     ${PYTHON_PN}-idna \
-    ${PYTHON_PN}-pyasn1 \
+    ${PYTHON_PN}-asn1crypto \
     ${PYTHON_PN}-pycparser \
     ${PYTHON_PN}-setuptools \
     ${PYTHON_PN}-six \
@@ -25,9 +26,8 @@ RDEPENDS_${PN}_class-target += " \
     ${PYTHON_PN}-cffi \
     ${PYTHON_PN}-idna \
     ${PYTHON_PN}-numbers \
-    ${PYTHON_PN}-pyasn1 \
+    ${PYTHON_PN}-asn1crypto \
     ${PYTHON_PN}-pycparser \
-    ${PYTHON_PN}-subprocess \
     ${PYTHON_PN}-setuptools \
     ${PYTHON_PN}-six \
     ${PYTHON_PN}-threading \
@@ -39,6 +39,7 @@ RDEPENDS_${PN}-ptest += " \
     ${PYTHON_PN}-iso8601 \
     ${PYTHON_PN}-pretend \
     ${PYTHON_PN}-pytest \
+    ${PYTHON_PN}-pytz \
 "
 
 inherit ptest

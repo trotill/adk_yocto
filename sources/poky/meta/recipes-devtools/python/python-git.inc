@@ -8,14 +8,25 @@ SECTION = "devel/python"
 LICENSE = "BSD-3-Clause"
 LIC_FILES_CHKSUM = "file://LICENSE;md5=8b8d26c37c1d5a04f9b0186edbebc183"
 
-SRC_URI = "https://files.pythonhosted.org/packages/source/G/GitPython/GitPython-${PV}.tar.gz"
+PYPI_PACKAGE = "GitPython"
 
-SRC_URI[md5sum] = "77f8339e68dedb6d7c4e26371a588ed9"
-SRC_URI[sha256sum] = "e96f8e953cf9fee0a7599fc587667591328760b6341a0081ef311a942fc96204"
+inherit pypi
 
-UPSTREAM_CHECK_URI = "https://pypi.python.org/pypi/GitPython/"
-UPSTREAM_CHECK_REGEX = "/GitPython/(?P<pver>(\d+[\.\-_]*)+)"
+SRC_URI[md5sum] = "cee43a39a1468084d49d1c49fb675204"
+SRC_URI[sha256sum] = "8237dc5bfd6f1366abeee5624111b9d6879393d84745a507de0fda86043b65a8"
 
-S = "${WORKDIR}/GitPython-${PV}"
+DEPENDS = "${PYTHON_PN}-gitdb"
 
+RDEPENDS_${PN} += " \
+                   ${PYTHON_PN}-datetime \
+                   ${PYTHON_PN}-gitdb \
+                   ${PYTHON_PN}-io \
+                   ${PYTHON_PN}-logging \
+                   ${PYTHON_PN}-math \
+                   ${PYTHON_PN}-netclient \
+                   ${PYTHON_PN}-stringold \
+                   ${PYTHON_PN}-unittest \
+                   ${PYTHON_PN}-unixadmin \
+                   git \
+"
 BBCLASSEXTEND = "nativesdk"

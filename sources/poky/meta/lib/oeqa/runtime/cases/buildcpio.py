@@ -1,7 +1,7 @@
 from oeqa.runtime.case import OERuntimeTestCase
 from oeqa.core.decorator.depends import OETestDepends
 from oeqa.core.decorator.oeid import OETestID
-from oeqa.core.decorator.data import skipIfNotFeature
+from oeqa.runtime.decorator.package import OEHasPackage
 
 from oeqa.runtime.utils.targetbuildproject import TargetBuildProject
 
@@ -9,22 +9,22 @@ class BuildCpioTest(OERuntimeTestCase):
 
     @classmethod
     def setUpClass(cls):
-        uri = 'https://ftp.gnu.org/gnu/cpio'
-        uri = '%s/cpio-2.12.tar.bz2' % uri
+        uri = 'https://downloads.yoctoproject.org/mirror/sources/cpio-2.12.tar.gz'
         cls.project = TargetBuildProject(cls.tc.target,
                                          uri,
                                          dl_dir = cls.tc.td['DL_DIR'])
-        cls.project.download_archive()
 
     @classmethod
     def tearDownClass(cls):
         cls.project.clean()
 
     @OETestID(205)
-    @skipIfNotFeature('tools-sdk',
-                      'Test requires tools-sdk to be in IMAGE_FEATURES')
     @OETestDepends(['ssh.SSHTest.test_ssh'])
+    @OEHasPackage(['gcc'])
+    @OEHasPackage(['make'])
+    @OEHasPackage(['autoconf'])
     def test_cpio(self):
+        self.project.download_archive()
         self.project.run_configure()
         self.project.run_make()
         self.project.run_install()

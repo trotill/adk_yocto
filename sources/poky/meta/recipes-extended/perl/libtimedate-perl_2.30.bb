@@ -1,4 +1,5 @@
 SUMMARY = "Perl modules useful for manipulating date and time information"
+HOMEPAGE = "https://metacpan.org/release/TimeDate"
 SECTION = "libs"
 # You can redistribute it and/or modify it under the same terms as Perl itself.
 LICENSE = "Artistic-1.0 | GPL-1.0+"
@@ -8,7 +9,7 @@ SRC_URI = "http://search.cpan.org/CPAN/authors/id/G/GB/GBARR/TimeDate-${PV}.tar.
 
 S = "${WORKDIR}/TimeDate-${PV}"
 
-inherit cpan
+inherit cpan ptest-perl
 
 BBCLASSEXTEND = "native"
 

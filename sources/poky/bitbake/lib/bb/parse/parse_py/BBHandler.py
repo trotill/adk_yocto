@@ -131,9 +131,6 @@ def handle(fn, d, include):
 
     abs_fn = resolve_file(fn, d)
 
-    if include:
-        bb.parse.mark_dependency(d, abs_fn)
-
     # actual loading
     statements = get_statements(fn, abs_fn, base_name)
 
@@ -144,7 +141,7 @@ def handle(fn, d, include):
     try:
         statements.eval(d)
     except bb.parse.SkipRecipe:
-        bb.data.setVar("__SKIPPED", True, d)
+        d.setVar("__SKIPPED", True)
         if include == 0:
             return { "" : d }
 

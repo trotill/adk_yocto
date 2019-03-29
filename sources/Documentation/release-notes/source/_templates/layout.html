@@ -1,0 +1,100 @@
+{#
+    Custom based on the agogo/layout.html
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    Sphinx layout template for the agogo theme, originally written
+    by Andi Albrecht.
+
+    :copyright: Copyright 2007-2014 by the Sphinx team, see AUTHORS.
+    :license: BSD, see LICENSE for details.
+#}
+{%- extends "!basic/layout.html" %}
+
+{% block header %}
+    <div class="header-wrapper">
+      <div class="header">
+        {%- if logo %}
+          <p class="logo"><a href="{{ pathto(master_doc) }}">
+            <img class="logo" src="{{ pathto('_static/' + logo, 1) }}" alt="Logo"/>
+          </a></p>
+        {%- endif %}
+        {%- block headertitle %}
+        <div class="headertitle"><a
+          href="{{ pathto(master_doc) }}">{{ shorttitle|e }}</a></div>
+        {%- endblock %}
+        <div class="rel">
+          {%- for rellink in rellinks|reverse %}
+          <a href="{{ pathto(rellink[0]) }}" title="{{ rellink[1]|striptags|e }}"
+             {{ accesskey(rellink[2]) }}>{{ rellink[3] }}</a>
+          {%- if not loop.last %}{{ reldelim2 }}{% endif %}
+          {%- endfor %}
+        </div>
+       </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="sidebar">
+          {%- block sidebartoc %}
+          <h3>{{ _('Table Of Contents') }}</h3>
+          {{ toc }}
+          {%- endblock %}
+        </div>
+        <div class="document">
+          {%- block document %}
+            {{ super() }}
+          {%- endblock %}
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+{% endblock %}
+
+{% block footer %}
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          {%- for rellink in rellinks|reverse %}
+          <a href="{{ pathto(rellink[0]) }}" title="{{ rellink[1]|striptags|e }}"
+             {{ accesskey(rellink[2]) }}>{{ rellink[3] }}</a>
+          {%- if not loop.last %}{{ reldelim2 }}{% endif %}
+          {%- endfor %}
+          {%- if show_source and has_source and sourcename %}
+            <br/>
+            <a href="{{ pathto('_sources/' + sourcename, true)|e }}"
+               rel="nofollow">{{ _('Show Source') }}</a>
+          {%- endif %}
+        </div>
+
+        <div id="creative-commons-licence">
+          <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">
+            <img alt="Creative Commons License" style="border-width:0"
+                 src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a>
+          <br />
+          <span xmlns:dct="http://purl.org/dc/terms/" href="http://purl.org/dc/dcmitype/Text"
+                property="dct:title" rel="dct:type">FSL Community BSP Release Notes</span> by
+          <a xmlns:cc="http://creativecommons.org/ns#" href="http://freescale.github.io/doc/release-notes/current/"
+             property="cc:attributionName" rel="cc:attributionURL">http://freescale.github.io/doc/release-notes/current/</a>
+          is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">
+            Creative Commons Attribution-ShareAlike 4.0 International License</a>.
+          <br />
+          Based on a work at
+          <a xmlns:dct="http://purl.org/dc/terms/"
+             href="https://github.com/Freescale/Documentation"
+             rel="dct:source">https://github.com/Freescale/Documentation</a>.
+        </div>
+        <div class="clearer"></div>
+        <div class="align-center line-block">
+          {{ super() }}
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+{% endblock %}
+
+{% block relbar1 %}{% endblock %}
+{% block relbar2 %}{% endblock %}
+
+{{ super() }}

@@ -1,35 +1,24 @@
 SUMMARY = "Synergy - control multiple computers with one keyboard and mouse"
 HOMEPAGE = "http://synergy-project.org"
-LIC_FILES_CHKSUM = "file://LICENSE;md5=0f366945b209c5523e39889f636af00a"
-LICENSE = "GPL-2.0"
+LIC_FILES_CHKSUM = "file://LICENSE;md5=54c1fc8d8bb6776ae501acfb1585e9d6"
+LICENSE = "GPL-2.0-with-OpenSSL-exception"
 SECTION = "x11/utils"
 
 DEPENDS = "virtual/libx11 libxtst libxinerama curl openssl"
-do_unpack_extra[depends] = "unzip-native:do_populate_sysroot"
 
 # depends on virtual/libx11
 REQUIRED_DISTRO_FEATURES = "x11"
 
-SRC_URI = "git://github.com/synergy/synergy.git;protocol=http"
+SRC_URI = "git://github.com/symless/synergy-core;protocol=https;nobranch=1"
 
-# Version 1.7.4-rc8
-SRCREV ?= "588fb4b805dd452556d05dbc03fe29ea5b4e43c0"
-PV = "1.7.3+1.7.4-rc8+${SRCPV}"
+# Version 1.10.1-stable
+SRCREV ?= "1b4c076127687aceac931d269e898beaac1cad9f"
+PV = "1.10.1+git${SRCPV}"
 
 S = "${WORKDIR}/git"
 
 inherit cmake distro_features_check
 
-do_unpack_extra() {
-    cd ${S}/ext
-    for file in *.zip; do
-        fname="${file##*/}"
-        unzip $file -d ${fname%.*}
-    done
-}
-addtask unpack_extra after do_unpack before do_patch
+EXTRA_OECMAKE += "-DSYNERGY_BUILD_LEGACY_GUI=OFF"
 
-do_install() {
-    install -d ${D}/usr/bin
-    install -m 0755 ${S}/bin/synergy* ${D}/usr/bin/
-}
+FILES_${PN} += "${datadir}/icons/hicolor"

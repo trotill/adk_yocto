@@ -10,12 +10,8 @@ from oeqa.core.utils.path import findFile
 
 class RpmBasicTest(OERuntimeTestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        if cls.tc.td['PACKAGE_CLASSES'].split()[0] != 'package_rpm':
-            cls.skipTest('Tests require image to be build from rpm')
-
     @OETestID(960)
+    @OEHasPackage(['rpm'])
     @OETestDepends(['ssh.SSHTest.test_ssh'])
     def test_rpm_help(self):
         status, output = self.target.run('rpm --help')
@@ -25,6 +21,9 @@ class RpmBasicTest(OERuntimeTestCase):
     @OETestID(191)
     @OETestDepends(['rpm.RpmBasicTest.test_rpm_help'])
     def test_rpm_query(self):
+        status, output = self.target.run('ls /var/lib/rpm/')
+        if status != 0:
+            self.skipTest('No /var/lib/rpm on target')
         status, output = self.target.run('rpm -q rpm')
         msg = 'status and output: %s and %s' % (status, output)
         self.assertEqual(status, 0, msg=msg)
@@ -33,36 +32,31 @@ class RpmInstallRemoveTest(OERuntimeTestCase):
 
     @classmethod
     def setUpClass(cls):
-        if cls.tc.td['PACKAGE_CLASSES'].split()[0] != 'package_rpm':
-            cls.skipTest('Tests require image to be build from rpm')
-
         pkgarch = cls.td['TUNE_PKGARCH'].replace('-', '_')
         rpmdir = os.path.join(cls.tc.td['DEPLOY_DIR'], 'rpm', pkgarch)
-        # Pick rpm-doc as a test file to get installed, because it's small
+        # Pick base-passwd-doc as a test file to get installed, because it's small
         # and it will always be built for standard targets
-        rpm_doc = 'rpm-doc-*.%s.rpm' % pkgarch
+        rpm_doc = 'base-passwd-doc-*.%s.rpm' % pkgarch
+        if not os.path.exists(rpmdir):
+            return
         for f in fnmatch.filter(os.listdir(rpmdir), rpm_doc):
-            test_file = os.path.join(rpmdir, f)
-        dst = '/tmp/rpm-doc.rpm'
-        cls.tc.target.copyTo(test_file, dst)
-
-    @classmethod
-    def tearDownClass(cls):
-        dst = '/tmp/rpm-doc.rpm'
-        cls.tc.target.run('rm -f %s' % dst)
+            cls.test_file = os.path.join(rpmdir, f)
+        cls.dst = '/tmp/base-passwd-doc.rpm'
 
     @OETestID(192)
-    @OETestDepends(['rpm.RpmBasicTest.test_rpm_help'])
+    @OETestDepends(['rpm.RpmBasicTest.test_rpm_query'])
     def test_rpm_install(self):
-        status, output = self.target.run('rpm -ivh /tmp/rpm-doc.rpm')
-        msg = 'Failed to install rpm-doc package: %s' % output
+        self.tc.target.copyTo(self.test_file, self.dst)
+        status, output = self.target.run('rpm -ivh /tmp/base-passwd-doc.rpm')
+        msg = 'Failed to install base-passwd-doc package: %s' % output
         self.assertEqual(status, 0, msg=msg)
+        self.tc.target.run('rm -f %s' % self.dst)
 
     @OETestID(194)
     @OETestDepends(['rpm.RpmInstallRemoveTest.test_rpm_install'])
     def test_rpm_remove(self):
-        status,output = self.target.run('rpm -e rpm-doc')
-        msg = 'Failed to remove rpm-doc package: %s' % output
+        status,output = self.target.run('rpm -e base-passwd-doc')
+        msg = 'Failed to remove base-passwd-doc package: %s' % output
         self.assertEqual(status, 0, msg=msg)
 
     @OETestID(1096)
@@ -106,7 +100,7 @@ class RpmInstallRemoveTest(OERuntimeTestCase):
         Expected:    There should be some RPM prefixed entries in the above file.
         Product:     BSPs
         Author:      Alexandru Georgescu <alexandru.c.georgescu@intel.com>
-        Author:      Alexander Kanavin <alexander.kanavin@intel.com>
+        Author:      Alexander Kanavin <alex.kanavin@gmail.com>
         AutomatedBy: Daniel Istrate <daniel.alexandrux.istrate@intel.com>
         """
         db_files_cmd = 'ls /var/lib/rpm/__db.*'
@@ -117,18 +111,22 @@ class RpmInstallRemoveTest(OERuntimeTestCase):
         msg =  'Failed to find database files under /var/lib/rpm/ as __db.xxx'
         self.assertEqual(0, status, msg=msg)
 
+        self.tc.target.copyTo(self.test_file, self.dst)
+
         # Remove the package just in case
-        self.target.run('rpm -e rpm-doc')
+        self.target.run('rpm -e base-passwd-doc')
 
         # Install/Remove a package 10 times
         for i in range(10):
-            status, output = self.target.run('rpm -ivh /tmp/rpm-doc.rpm')
-            msg = 'Failed to install rpm-doc package. Reason: {}'.format(output)
+            status, output = self.target.run('rpm -ivh /tmp/base-passwd-doc.rpm')
+            msg = 'Failed to install base-passwd-doc package. Reason: {}'.format(output)
             self.assertEqual(0, status, msg=msg)
 
-            status, output = self.target.run('rpm -e rpm-doc')
-            msg = 'Failed to remove rpm-doc package. Reason: {}'.format(output)
+            status, output = self.target.run('rpm -e base-passwd-doc')
+            msg = 'Failed to remove base-passwd-doc package. Reason: {}'.format(output)
             self.assertEqual(0, status, msg=msg)
+
+        self.tc.target.run('rm -f %s' % self.dst)
 
         # if using systemd this should ensure all entries are flushed to /var
         status, output = self.target.run("journalctl --sync")

@@ -9,8 +9,12 @@ from oeqa.runtime.decorator.package import OEHasPackage
 class LogrotateTest(OERuntimeTestCase):
 
     @classmethod
+    def setUpClass(cls):
+        cls.tc.target.run('cp /etc/logrotate.d/wtmp $HOME/wtmp.oeqabak')
+
+    @classmethod
     def tearDownClass(cls):
-        cls.tc.target.run('rm -rf $HOME/logrotate_dir')
+        cls.tc.target.run('mv -f $HOME/wtmp.oeqabak /etc/logrotate.d/wtmp && rm -rf $HOME/logrotate_dir')
 
     @OETestID(1544)
     @OETestDepends(['ssh.SSHTest.test_ssh'])
@@ -21,9 +25,9 @@ class LogrotateTest(OERuntimeTestCase):
         self.assertEqual(status, 0, msg = msg)
 
         cmd = ('sed -i "s#wtmp {#wtmp {\\n    olddir $HOME/logrotate_dir#"'
-               ' /etc/logrotate.conf')
+               ' /etc/logrotate.d/wtmp')
         status, output = self.target.run(cmd)
-        msg = ('Could not write to logrotate.conf file. Status and output: '
+        msg = ('Could not write to logrotate.d/wtmp file. Status and output: '
                ' %s and %s' % (status, output))
         self.assertEqual(status, 0, msg = msg)
 

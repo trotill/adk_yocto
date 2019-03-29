@@ -9,20 +9,25 @@ LIC_FILES_CHKSUM = "file://COPYING;md5=eb723b61539feef013de476e68b5c50a"
 HOMEPAGE ="http://sourceforge.net/projects/smbnetfs"
 
 DEPENDS = "fuse samba"
+DEPENDS_append_libc-musl = " libexecinfo"
+
+# samba depends on libpam
+inherit distro_features_check
+REQUIRED_DISTRO_FEATURES = "pam"
 
 inherit autotools gitpkgv pkgconfig
 
 PKGV = "${GITPKGVTAG}"
 
-SRCREV = "ace1c519d45fe488b9b7e6cc77a2bcadb6c83464"
+SRCREV = "bc6b94b015fdaf7c4dab56ccb996eecea8bc4373"
 
 SRC_URI = "git://smbnetfs.git.sourceforge.net/gitroot/smbnetfs/smbnetfs;branch=master \
            file://configure.patch \
            file://Using-PKG_CHECK_MODULES-to-found-headers-and-libraries.patch"
 
 PACKAGECONFIG ??= ""
-PACKAGECONFIG[gnome-keyring] = "--with-gnome-keyring=yes,--with-gnome-keyring=no,libgnome-keyring"
+PACKAGECONFIG[libsecret] = "--with-libsecret=yes,--with-libsecret=no,libsecret"
 
 S = "${WORKDIR}/git"
 
-PNBLACKLIST[smbnetfs] ?= "Fails to build with RSS http://errors.yoctoproject.org/Errors/Details/132827/ - the recipe will be removed on 2017-09-01 unless the issue is fixed"
+LDFLAGS_append_libc-musl = " -lexecinfo"

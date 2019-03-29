@@ -20,8 +20,9 @@ class BuildProject(metaclass=ABCMeta):
         if not tmpdir:
             tmpdir = self.d.getVar('WORKDIR')
             if not tmpdir:
-                tmpdir = tempfile.mkdtemp(prefix='buildproject')
-        self.localarchive = os.path.join(tmpdir,self.archive)
+                self.tempdirobj = tempfile.TemporaryDirectory(prefix='buildproject-')
+                tmpdir = self.tempdirobj.name
+        self.localarchive = os.path.join(tmpdir, self.archive)
         if foldername:
             self.fname = foldername
         else:
@@ -69,7 +70,7 @@ class BuildProject(metaclass=ABCMeta):
 
     def clean(self):
         self._run('rm -rf %s' % self.targetdir)
-        subprocess.call('rm -f %s' % self.localarchive, shell=True)
+        subprocess.check_call('rm -f %s' % self.localarchive, shell=True)
         pass
 
 class TargetBuildProject(BuildProject):
@@ -136,4 +137,4 @@ class SDKBuildProject(BuildProject):
 
     def _run(self, cmd):
         self.log("Running . %s; " % self.sdkenv + cmd)
-        return subprocess.call(". %s; " % self.sdkenv + cmd, shell=True)
+        return subprocess.check_call(". %s; " % self.sdkenv + cmd, shell=True)

@@ -58,7 +58,7 @@ Available Poky's distros: `echo; ls sources/poky/meta-poky/conf/distro/*.conf \
 Examples:
 
 - To create a new Yocto build directory:
-  $ MACHINE=imx6qsabresd DISTRO=fslc-framebuffer source $PROGNAME build
+  $ MACHINE=imx6qdlsabresd DISTRO=fslc-framebuffer source $PROGNAME build
 
 - To use an existing Yocto build directory:
   $ source $PROGNAME build
@@ -155,11 +155,7 @@ if [ "$build_dir_setup_enabled" = "true" ]; then
     grep -v '^#\|^$' conf/local.conf.sample > conf/local.conf
     cat >> conf/local.conf <<EOF
 
-LICENSE_FLAGS_WHITELIST = "commercial"
-
-DL_DIR ?= '/opt/freescale/yocto/imx/'
-SSTATE_DIR ?= '/opt/freescale/yocto/sstate-cache'
-
+DL_DIR ?= "\${BSPDIR}/downloads/"
 EOF
     # Change settings according environment
     sed -e "s,MACHINE ??=.*,MACHINE ??= '$MACHINE',g" \

@@ -5,15 +5,36 @@ SECTION = "devel/python"
 LICENSE = "Apache-2.0"
 LIC_FILES_CHKSUM = "file://LICENSE.txt;md5=e23fadd6ceef8c618fc1c65191d846fa"
 PYPI_PACKAGE = "Cython"
-BBCLASSEXTEND = "native"
+BBCLASSEXTEND = "native nativesdk"
 
-SRC_URI[md5sum] = "642c81285e1bb833b14ab3f439964086"
-SRC_URI[sha256sum] = "f141d1f9c27a07b5a93f7dc5339472067e2d7140d1c5a9e20112a5665ca60306"
+SRC_URI[md5sum] = "0cb620e1259818e4ecc1a056e8c3a8be"
+SRC_URI[sha256sum] = "b64575241f64f6ec005a4d4137339fb0ba5e156e826db2fdb5f458060d9979e0"
 
 inherit pypi
 
 RDEPENDS_${PN}_class-target += "\
+    ${PYTHON_PN}-misc \
     ${PYTHON_PN}-netserver \
-    ${PYTHON_PN}-subprocess \
+    ${PYTHON_PN}-pkgutil \
+    ${PYTHON_PN}-pyparsing \
+    ${PYTHON_PN}-setuptools \
     ${PYTHON_PN}-shell \
+    ${PYTHON_PN}-xml \
 "
+
+RDEPENDS_${PN}_class-nativesdk += "\
+    nativesdk-${PYTHON_PN}-misc \
+    nativesdk-${PYTHON_PN}-netserver \
+    nativesdk-${PYTHON_PN}-pkgutil \
+    nativesdk-${PYTHON_PN}-pyparsing \
+    nativesdk-${PYTHON_PN}-setuptools \
+    nativesdk-${PYTHON_PN}-shell \
+    nativesdk-${PYTHON_PN}-xml \
+"
+
+do_install_append() {
+	# Make sure we use /usr/bin/env python
+	for PYTHSCRIPT in `grep -rIl '^#!.*python' ${D}`; do
+		sed -i -e '1s|^#!.*|#!/usr/bin/env ${PYTHON_PN}|' $PYTHSCRIPT
+	done
+}

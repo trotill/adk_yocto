@@ -1,13 +1,18 @@
 SUMMARY = "Internationalised Domain Names in Applications"
 HOMEPAGE = "https://github.com/kjd/idna"
 LICENSE = "BSD-3-Clause & Python-2.0 & Unicode"
-LIC_FILES_CHKSUM = "file://LICENSE.rst;md5=c9ba5acd829579492fd5eb306c7a0565"
+LIC_FILES_CHKSUM = "file://LICENSE.rst;md5=782775b32f96098512e283fb5d4546cd"
 
-SRC_URI[md5sum] = "fc1d992bef73e8824db411bb5d21f012"
-SRC_URI[sha256sum] = "3cb5ce08046c4e3a560fc02f138d0ac63e00f8ce5901a56b32ec8b7994082aab"
+SRC_URI[md5sum] = "0e5bb69018ddef1b9d95f681182be82c"
+SRC_URI[sha256sum] = "684a38a6f903c1d71d6d5fac066b58d7768af4de2b832e426ec79c30daa94a16"
 
 RDEPENDS_${PN}_class-target = "\
     ${PYTHON_PN}-codecs \
 "
+
+# Remove bundled egg-info
+do_compile_prepend() {
+    rm -rf ${S}/idna.egg-info
+}
 
 BBCLASSEXTEND = "native nativesdk"

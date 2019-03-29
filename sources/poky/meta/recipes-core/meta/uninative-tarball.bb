@@ -12,7 +12,11 @@ TOOLCHAIN_HOST_TASK = "\
     nativesdk-glibc-gconv-iso8859-1 \
     nativesdk-glibc-gconv-utf-16 \
     nativesdk-glibc-gconv-cp1252 \
+    nativesdk-glibc-gconv-euc-jp \
+    nativesdk-glibc-gconv-libjis \
     nativesdk-patchelf \
+    nativesdk-libxcrypt \
+    nativesdk-libnss-nis \
     "
 
 INHIBIT_DEFAULT_DEPS = "1"
@@ -34,8 +38,6 @@ inherit populate_sdk
 inherit nopackages
 
 deltask install
-deltask package
-deltask packagedata
 deltask populate_sysroot
 
 do_populate_sdk[stamp-extra-info] = "${PACKAGE_ARCH}"

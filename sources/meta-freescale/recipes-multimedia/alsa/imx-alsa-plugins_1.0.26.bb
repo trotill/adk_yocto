@@ -1,10 +1,11 @@
 # Copyright (C) 2013-2016 Freescale Semiconductor
+# Copyright (C) 2017-2019 NXP
 # Released under the MIT license (see COPYING.MIT for the terms)
 
 DESCRIPTION = "Freescale alsa-lib plugins"
 LICENSE = "GPLv2"
 SECTION = "multimedia"
-DEPENDS = "alsa-lib virtual/kernel"
+DEPENDS = "alsa-lib"
 
 # For backwards compatibility
 PROVIDES += "fsl-alsa-plugins"
@@ -12,18 +13,17 @@ RREPLACES_${PN} = "fsl-alsa-plugins"
 RPROVIDES_${PN} = "fsl-alsa-plugins"
 RCONFLICTS_${PN} = "fsl-alsa-plugins"
 
-# Make sure kernel sources are available
-do_configure[depends] += "virtual/kernel:do_shared_workdir"
-
 LIC_FILES_CHKSUM = "file://COPYING.GPL;md5=94d55d512a9ba36caa9b7df079bae19f"
 
-inherit autotools pkgconfig
+inherit autotools pkgconfig use-imx-headers
 
-SRC_URI = "${FSL_MIRROR}/${PN}-${PV}.tar.gz"
-SRC_URI[md5sum] = "8fe4bcfddeca82dd01a9c4c6ce9471df"
-SRC_URI[sha256sum] = "0a7e8d90fdde2f6780605ecfee674e6e13523915a7bcd64078bc507ac1a8deb8"
+SRCBRANCH = "nxp/master"
+SRC_URI = "git://source.codeaurora.org/external/imx/imx-alsa-plugins.git;protocol=https;branch=${SRCBRANCH}"
+SRCREV = "9a63071e7734bd164017f3761b8d1944c017611f"
 
-INCLUDE_DIR = "-I${STAGING_KERNEL_DIR}/include/uapi -I${STAGING_KERNEL_DIR}/include"
+S = "${WORKDIR}/git"
+
+INCLUDE_DIR = "-I${STAGING_INCDIR_IMX}"
 
 EXTRA_OECONF = "CFLAGS="${INCLUDE_DIR}""
 
@@ -33,5 +33,4 @@ FILES_${PN} += "${libdir}/alsa-lib/libasound_*.so"
 FILES_${PN}-dbg += "${libdir}/alsa-lib/.debug"
 FILES_${PN}-dev += "${libdir}/alsa-lib/*.la"
 
-COMPATIBLE_MACHINE = "(mx6dl|mx6q|mx6sl|mx6sx|mx6ul|mx6ull|mx7d)"
-PACKAGE_ARCH = "${MACHINE_SOCARCH}"
+COMPATIBLE_MACHINE = "(mx6|mx7|mx8)"

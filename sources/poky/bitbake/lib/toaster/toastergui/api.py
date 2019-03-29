@@ -18,17 +18,20 @@
 
 # Please run flake8 on this file before sending patches
 
+import os
 import re
 import logging
 import json
+import subprocess
 from collections import Counter
+from shutil import copyfile
 
 from orm.models import Project, ProjectTarget, Build, Layer_Version
 from orm.models import LayerVersionDependency, LayerSource, ProjectLayer
 from orm.models import Recipe, CustomImageRecipe, CustomImagePackage
 from orm.models import Layer, Target, Package, Package_Dependency
 from orm.models import ProjectVariable
-from bldcontrol.models import BuildRequest
+from bldcontrol.models import BuildRequest, BuildEnvironment
 from bldcontrol import bbcontroller
 
 from django.http import HttpResponse, JsonResponse
@@ -37,6 +40,18 @@ from django.core.urlresolvers import reverse
 from django.db.models import Q, F
 from django.db import Error
 from toastergui.templatetags.projecttags import filtered_filesizeformat
+from django.utils import timezone
+import pytz
+
+# development/debugging support
+verbose = 2
+def _log(msg):
+    if 1 == verbose:
+        print(msg)
+    elif 2 == verbose:
+        f1=open('/tmp/toaster.log', 'a')
+        f1.write("|" + msg + "|\n" )
+        f1.close()
 
 logger = logging.getLogger("toaster")
 
@@ -135,6 +150,130 @@ class XhrBuildRequest(View):
         response.status_code = 500
         return response
 
+
+class XhrProjectUpdate(View):
+
+    def get(self, request, *args, **kwargs):
+        return HttpResponse()
+
+    def post(self, request, *args, **kwargs):
+        """
+          Project Update
+
+          Entry point: /xhr_projectupdate/<project_id>
+          Method: POST
+
+          Args:
+              pid: pid of project to update
+
+          Returns:
+              {"error": "ok"}
+            or
+              {"error": <error message>}
+        """
+
+        project = Project.objects.get(pk=kwargs['pid'])
+        logger.debug("ProjectUpdateCallback:project.pk=%d,project.builddir=%s" % (project.pk,project.builddir))
+
+        if 'do_update' in request.POST:
+
+            # Extract any default image recipe
+            if 'default_image' in request.POST:
+                project.set_variable(Project.PROJECT_SPECIFIC_DEFAULTIMAGE,str(request.POST['default_image']))
+            else:
+                project.set_variable(Project.PROJECT_SPECIFIC_DEFAULTIMAGE,'')
+
+            logger.debug("ProjectUpdateCallback:Chain to the build request")
+
+            # Chain to the build request
+            xhrBuildRequest = XhrBuildRequest()
+            return xhrBuildRequest.post(request, *args, **kwargs)
+
+        logger.warning("ERROR:XhrProjectUpdate")
+        response = HttpResponse()
+        response.status_code = 500
+        return response
+
+class XhrSetDefaultImageUrl(View):
+
+    def get(self, request, *args, **kwargs):
+        return HttpResponse()
+
+    def post(self, request, *args, **kwargs):
+        """
+          Project Update
+
+          Entry point: /xhr_setdefaultimage/<project_id>
+          Method: POST
+
+          Args:
+              pid: pid of project to update default image
+
+          Returns:
+              {"error": "ok"}
+            or
+              {"error": <error message>}
+        """
+
+        project = Project.objects.get(pk=kwargs['pid'])
+        logger.debug("XhrSetDefaultImageUrl:project.pk=%d" % (project.pk))
+
+        # set any default image recipe
+        if 'targets' in request.POST:
+            default_target = str(request.POST['targets'])
+            project.set_variable(Project.PROJECT_SPECIFIC_DEFAULTIMAGE,default_target)
+            logger.debug("XhrSetDefaultImageUrl,project.pk=%d,project.builddir=%s" % (project.pk,project.builddir))
+            return error_response('ok')
+
+        logger.warning("ERROR:XhrSetDefaultImageUrl")
+        response = HttpResponse()
+        response.status_code = 500
+        return response
+
+
+#
+# Layer Management
+#
+# Rules for 'local_source_dir' layers
+#  * Layers must have a unique name in the Layers table
+#  * A 'local_source_dir' layer is supposed to be shared
+#    by all projects that use it, so that it can have the
+#    same logical name
+#  * Each project that uses a layer will have its own
+#    LayerVersion and Project Layer for it
+#  * During the Paroject delete process, when the last
+#    LayerVersion for a 'local_source_dir' layer is deleted
+#    then the Layer record is deleted to remove orphans
+#
+
+def scan_layer_content(layer,layer_version):
+    # if this is a local layer directory, we can immediately scan its content
+    if layer.local_source_dir:
+        try:
+            # recipes-*/*/*.bb
+            cmd = '%s %s' % ('ls', os.path.join(layer.local_source_dir,'recipes-*/*/*.bb'))
+            recipes_list = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,stderr=subprocess.STDOUT).stdout.read()
+            recipes_list = recipes_list.decode("utf-8").strip()
+            if recipes_list and 'No such' not in recipes_list:
+                for recipe in recipes_list.split('\n'):
+                    recipe_path = recipe[recipe.rfind('recipes-'):]
+                    recipe_name = recipe[recipe.rfind('/')+1:].replace('.bb','')
+                    recipe_ver = recipe_name.rfind('_')
+                    if recipe_ver > 0:
+                        recipe_name = recipe_name[0:recipe_ver]
+                    if recipe_name:
+                        ro, created = Recipe.objects.get_or_create(
+                            layer_version=layer_version,
+                            name=recipe_name
+                        )
+                        if created:
+                            ro.file_path = recipe_path
+                            ro.summary = 'Recipe %s from layer %s' % (recipe_name,layer.name)
+                            ro.description = ro.summary
+                        ro.save()
+
+        except Exception as e:
+            logger.warning("ERROR:scan_layer_content: %s" % e)
 
 class XhrLayer(View):
     """ Delete, Get, Add and Update Layer information
@@ -264,6 +403,7 @@ class XhrLayer(View):
             (csv)]
 
         """
+
         try:
             project = Project.objects.get(pk=kwargs['pid'])
 
@@ -284,7 +424,13 @@ class XhrLayer(View):
             if layer_data['name'] in existing_layers:
                 return JsonResponse({"error": "layer-name-exists"})
 
-            layer = Layer.objects.create(name=layer_data['name'])
+            if ('local_source_dir' in layer_data):
+                # Local layer can be shared across projects. They have no 'release'
+                # and are not included in get_all_compatible_layer_versions() above
+                layer,created = Layer.objects.get_or_create(name=layer_data['name'])
+                _log("Local Layer created=%s" % created)
+            else:
+                layer = Layer.objects.create(name=layer_data['name'])
 
             layer_version = Layer_Version.objects.create(
                 layer=layer,
@@ -292,14 +438,14 @@ class XhrLayer(View):
                 layer_source=LayerSource.TYPE_IMPORTED)
 
             # Local layer
-            if 'local_source_dir' in layer_data:
+            if ('local_source_dir' in layer_data): ### and layer.local_source_dir:
                 layer.local_source_dir = layer_data['local_source_dir']
             # git layer
             elif 'vcs_url' in layer_data:
                 layer.vcs_url = layer_data['vcs_url']
                 layer_version.dirpath = layer_data['dir_path']
-                layer_version.commit = layer_data['get_ref']
-                layer_version.branch = layer_data['get_ref']
+                layer_version.commit = layer_data['git_ref']
+                layer_version.branch = layer_data['git_ref']
 
             layer.save()
             layer_version.save()
@@ -323,6 +469,9 @@ class XhrLayer(View):
                             {'name': layer_dep.layer.name,
                              'layerdetailurl':
                              layer_dep.get_detailspage_url(project.pk)})
+
+            # Scan the layer's content and update components
+            scan_layer_content(layer,layer_version)
 
         except Layer_Version.DoesNotExist:
             return error_response("layer-dep-not-found")
@@ -508,6 +657,33 @@ class XhrCustomRecipe(View):
                     logger.warning("Error adding package %s %s" %
                                    (tpackage.package.name, e))
                     pass
+
+        # pre-create layer directory structure, so that other builds
+        # are not blocked by this new recipe dependecy
+        # NOTE: this is parallel code to 'localhostbecontroller.py'
+        be = BuildEnvironment.objects.all()[0]
+        layerpath = os.path.join(be.builddir,
+                                 CustomImageRecipe.LAYER_NAME)
+        for name in ("conf", "recipes"):
+            path = os.path.join(layerpath, name)
+            if not os.path.isdir(path):
+                os.makedirs(path)
+        # pre-create layer.conf
+        config = os.path.join(layerpath, "conf", "layer.conf")
+        if not os.path.isfile(config):
+            with open(config, "w") as conf:
+                conf.write('BBPATH .= ":${LAYERDIR}"\nBBFILES += "${LAYERDIR}/recipes/*.bb"\n')
+        # pre-create new image's recipe file
+        recipe_path = os.path.join(layerpath, "recipes", "%s.bb" %
+                                   recipe.name)
+        with open(recipe_path, "w") as recipef:
+            content = recipe.generate_recipe_file_contents()
+            if not content:
+                # Delete this incomplete image recipe object
+                recipe.delete()
+                return error_response("recipe-parent-not-exist")
+            else:
+                recipef.write(recipe.generate_recipe_file_contents())
 
         return JsonResponse(
             {"error": "ok",
@@ -752,7 +928,6 @@ class XhrCustomRecipePackages(View):
                 return error_response("Package %s not found in excludes"
                                       " but was in included list" %
                                       package.name)
-
         else:
             recipe.appends_set.add(package)
             # Make sure that package is not in the excludes set
@@ -760,26 +935,27 @@ class XhrCustomRecipePackages(View):
                 recipe.excludes_set.remove(package)
             except:
                 pass
-            # Add the dependencies we think will be added to the recipe
-            # as a result of appending this package.
-            # TODO this should recurse down the entire deps tree
-            for dep in package.package_dependencies_source.all_depends():
-                try:
-                    cust_package = CustomImagePackage.objects.get(
-                        name=dep.depends_on.name)
 
-                    recipe.includes_set.add(cust_package)
-                    try:
-                        # When adding the pre-requisite package, make
-                        # sure it's not in the excluded list from a
-                        # prior removal.
-                        recipe.excludes_set.remove(cust_package)
-                    except package.DoesNotExist:
-                        # Don't care if the package had never been excluded
-                        pass
-                except:
-                    logger.warning("Could not add package's suggested"
-                                   "dependencies to the list")
+        # Add the dependencies we think will be added to the recipe
+        # as a result of appending this package.
+        # TODO this should recurse down the entire deps tree
+        for dep in package.package_dependencies_source.all_depends():
+            try:
+                cust_package = CustomImagePackage.objects.get(
+                    name=dep.depends_on.name)
+
+                recipe.includes_set.add(cust_package)
+                try:
+                    # When adding the pre-requisite package, make
+                    # sure it's not in the excluded list from a
+                    # prior removal.
+                    recipe.excludes_set.remove(cust_package)
+                except package.DoesNotExist:
+                    # Don't care if the package had never been excluded
+                    pass
+            except:
+                logger.warning("Could not add package's suggested"
+                               "dependencies to the list")
         return JsonResponse({"error": "ok"})
 
     def delete(self, request, *args, **kwargs):
@@ -797,22 +973,24 @@ class XhrCustomRecipePackages(View):
                 recipe.excludes_set.add(package)
             else:
                 recipe.appends_set.remove(package)
-                all_current_packages = recipe.get_all_packages()
 
-                reverse_deps_dictlist = self._get_all_dependents(
-                    package.pk,
-                    all_current_packages)
+            # remove dependencies as well
+            all_current_packages = recipe.get_all_packages()
 
-                ids = [entry['pk'] for entry in reverse_deps_dictlist]
-                reverse_deps = CustomImagePackage.objects.filter(id__in=ids)
-                for r in reverse_deps:
-                    try:
-                        if r.id in included_packages:
-                            recipe.excludes_set.add(r)
-                        else:
-                            recipe.appends_set.remove(r)
-                    except:
-                        pass
+            reverse_deps_dictlist = self._get_all_dependents(
+                package.pk,
+                all_current_packages)
+
+            ids = [entry['pk'] for entry in reverse_deps_dictlist]
+            reverse_deps = CustomImagePackage.objects.filter(id__in=ids)
+            for r in reverse_deps:
+                try:
+                    if r.id in included_packages:
+                        recipe.excludes_set.add(r)
+                    else:
+                        recipe.appends_set.remove(r)
+                except:
+                    pass
 
             return JsonResponse({"error": "ok"})
         except CustomImageRecipe.DoesNotExist:
@@ -873,6 +1051,12 @@ class XhrProject(View):
             machinevar = prj.projectvariable_set.get(name="MACHINE")
             machinevar.value = request.POST['machineName']
             machinevar.save()
+
+        # Distro name change
+        if 'distroName' in request.POST:
+            distrovar = prj.projectvariable_set.get(name="DISTRO")
+            distrovar.value = request.POST['distroName']
+            distrovar.save()
 
         return JsonResponse({"error": "ok"})
 
@@ -960,10 +1144,11 @@ class XhrProject(View):
         except ProjectVariable.DoesNotExist:
             data["machine"] = None
         try:
-            data["distro"] = project.projectvariable_set.get(
-                name="DISTRO").value
+            data["distro"] = {"name":
+                               project.projectvariable_set.get(
+                                   name="DISTRO").value}
         except ProjectVariable.DoesNotExist:
-            data["distro"] = "-- not set yet"
+            data["distro"] = None
 
         data['error'] = "ok"
 
@@ -983,7 +1168,23 @@ class XhrProject(View):
                     state=BuildRequest.REQ_INPROGRESS):
                 XhrBuildRequest.cancel_build(br)
 
+            # gather potential orphaned local layers attached to this project
+            project_local_layer_list = []
+            for pl in ProjectLayer.objects.filter(project=project):
+                if pl.layercommit.layer_source == LayerSource.TYPE_IMPORTED:
+                    project_local_layer_list.append(pl.layercommit.layer)
+
+            # deep delete the project and its dependencies
             project.delete()
+
+            # delete any local layers now orphaned
+            _log("LAYER_ORPHAN_CHECK:Check for orphaned layers")
+            for layer in project_local_layer_list:
+                layer_refs = Layer_Version.objects.filter(layer=layer)
+                _log("LAYER_ORPHAN_CHECK:Ref Count for '%s' = %d" % (layer.name,len(layer_refs)))
+                if 0 == len(layer_refs):
+                    _log("LAYER_ORPHAN_CHECK:DELETE orpahned '%s'" % (layer.name))
+                    Layer.objects.filter(pk=layer.id).delete()
 
         except Project.DoesNotExist:
             return error_response("Project %s does not exist" %

@@ -19,7 +19,6 @@ RDEPENDS_${PN} = "\
     "
 
 NETWORK_MANAGER ?= "connman-gnome"
-NETWORK_MANAGER_libc-uclibc = ""
 
 SUMMARY_${PN}-base = "Sato desktop - base packages"
 RDEPENDS_${PN}-base = "\
@@ -33,9 +32,8 @@ RDEPENDS_${PN}-base = "\
     adwaita-icon-theme \
     settings-daemon \
     shutdown-desktop \
-    libsdl \
     ${NETWORK_MANAGER} \
-    udev-extraconf \
+    ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', '', 'udev-extraconf', d)} \
     ${@bb.utils.contains('DISTRO_FEATURES', 'pulseaudio', 'pulseaudio-server pulseaudio-client-conf-sato pulseaudio-misc', '', d)} \
     "
 
@@ -44,13 +42,16 @@ FILEMANAGER ?= "pcmanfm"
 WEB ?= ""
 #WEB = "epiphany"
 
+GSTEXAMPLES ?= "gst-examples"
+GSTEXAMPLES_riscv64 = ""
+
 SUMMARY_${PN}-apps = "Sato desktop - applications"
 RDEPENDS_${PN}-apps = "\
     l3afpad \
-    gst-player \
     matchbox-terminal \
     sato-screenshot \
     ${FILEMANAGER} \
+    ${GSTEXAMPLES} \
     ${WEB} \
     "
 

@@ -29,14 +29,20 @@ EXTERNALSRC_SYMLINKS ?= "oe-workdir:${WORKDIR} oe-logs:${T}"
 
 python () {
     externalsrc = d.getVar('EXTERNALSRC')
+    externalsrcbuild = d.getVar('EXTERNALSRC_BUILD')
+
+    if externalsrc and not externalsrc.startswith("/"):
+        bb.error("EXTERNALSRC must be an absolute path")
+    if externalsrcbuild and not externalsrcbuild.startswith("/"):
+        bb.error("EXTERNALSRC_BUILD must be an absolute path")
 
     # If this is the base recipe and EXTERNALSRC is set for it or any of its
     # derivatives, then enable BB_DONT_CACHE to force the recipe to always be
     # re-parsed so that the file-checksums function for do_compile is run every
     # time.
     bpn = d.getVar('BPN')
-    if bpn == d.getVar('PN'):
-        classextend = (d.getVar('BBCLASSEXTEND') or '').split()
+    classextend = (d.getVar('BBCLASSEXTEND') or '').split()
+    if bpn == d.getVar('PN') or not classextend:
         if (externalsrc or
                 ('native' in classextend and
                  d.getVar('EXTERNALSRC_pn-%s-native' % bpn)) or
@@ -47,8 +53,10 @@ python () {
             d.setVar('BB_DONT_CACHE', '1')
 
     if externalsrc:
+        import oe.recipeutils
+        import oe.path
+
         d.setVar('S', externalsrc)
-        externalsrcbuild = d.getVar('EXTERNALSRC_BUILD')
         if externalsrcbuild:
             d.setVar('B', externalsrcbuild)
         else:
@@ -69,6 +77,9 @@ python () {
             # Dummy value because the default function can't be called with blank SRC_URI
             d.setVar('SRCPV', '999')
 
+        if d.getVar('CONFIGUREOPT_DEPTRACK') == '--disable-dependency-tracking':
+            d.setVar('CONFIGUREOPT_DEPTRACK', '')
+
         tasks = filter(lambda k: d.getVarFlag(k, "task"), d.keys())
 
         for task in tasks:
@@ -80,10 +91,10 @@ python () {
                 d.appendVarFlag(task, "lockfiles", " ${S}/singletask.lock")
 
             # We do not want our source to be wiped out, ever (kernel.bbclass does this for do_clean)
-            cleandirs = (d.getVarFlag(task, 'cleandirs', False) or '').split()
+            cleandirs = oe.recipeutils.split_var_value(d.getVarFlag(task, 'cleandirs', False) or '')
             setvalue = False
             for cleandir in cleandirs[:]:
-                if d.expand(cleandir) == externalsrc:
+                if oe.path.is_path_parent(externalsrc, d.expand(cleandir)):
                     cleandirs.remove(cleandir)
                     setvalue = True
             if setvalue:
@@ -167,7 +178,10 @@ do_buildclean[nostamp] = "1"
 do_buildclean[doc] = "Call 'make clean' or equivalent in ${B}"
 externalsrc_do_buildclean() {
 	if [ -e Makefile -o -e makefile -o -e GNUmakefile ]; then
-		oe_runmake clean || die "make failed"
+		rm -f ${@' '.join([x.split(':')[0] for x in (d.getVar('EXTERNALSRC_SYMLINKS') or '').split()])}
+		if [ "${CLEANBROKEN}" != "1" ]; then
+			oe_runmake clean || die "make failed"
+		fi
 	else
 		bbnote "nothing to do - no makefile found"
 	fi
@@ -179,14 +193,20 @@ def srctree_hash_files(d, srcdir=None):
     import tempfile
 
     s_dir = srcdir or d.getVar('EXTERNALSRC')
-    git_dir = os.path.join(s_dir, '.git')
-    oe_hash_file = os.path.join(git_dir, 'oe-devtool-tree-sha1')
+    git_dir = None
+
+    try:
+        git_dir = os.path.join(s_dir,
+            subprocess.check_output(['git', '-C', s_dir, 'rev-parse', '--git-dir'], stderr=subprocess.DEVNULL).decode("utf-8").rstrip())
+    except subprocess.CalledProcessError:
+        pass
 
     ret = " "
-    if os.path.exists(git_dir):
-        with tempfile.NamedTemporaryFile(dir=git_dir, prefix='oe-devtool-index') as tmp_index:
+    if git_dir is not None:
+        oe_hash_file = os.path.join(git_dir, 'oe-devtool-tree-sha1')
+        with tempfile.NamedTemporaryFile(prefix='oe-devtool-index') as tmp_index:
             # Clone index
-            shutil.copy2(os.path.join(git_dir, 'index'), tmp_index.name)
+            shutil.copyfile(os.path.join(git_dir, 'index'), tmp_index.name)
             # Update our custom index
             env = os.environ.copy()
             env['GIT_INDEX_FILE'] = tmp_index.name

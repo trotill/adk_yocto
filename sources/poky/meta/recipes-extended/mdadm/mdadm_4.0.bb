@@ -16,12 +16,22 @@ SRC_URI = "${KERNELORG_MIRROR}/linux/utils/raid/mdadm/${BPN}-${PV}.tar.xz \
            file://run-ptest \
            file://0001-mdadm.h-Undefine-dprintf-before-redefining.patch \
            file://0001-include-sys-sysmacros.h-for-major-minor-defintions.patch \
+           file://0001-mdadm-Add-Wimplicit-fallthrough-0-in-Makefile.patch \
+           file://0002-mdadm-Specify-enough-length-when-write-to-buffer.patch \
+           file://0003-Replace-snprintf-with-strncpy-at-some-places-to-avoi.patch \
+           file://0004-mdadm-Forced-type-conversion-to-avoid-truncation.patch \
+           file://0005-Add-a-comment-to-indicate-valid-fallthrough.patch \
+           file://0001-Use-CC-to-check-for-implicit-fallthrough-warning-sup.patch \
+           file://0001-use-memmove-instead-of-memcpy-on-overlapping-region.patch \
+           file://0001-Disable-gcc8-warnings.patch \
+           file://mdadm.init \
+           file://mdmonitor.service \
            "
 SRC_URI[md5sum] = "2cb4feffea9167ba71b5f346a0c0a40d"
 SRC_URI[sha256sum] = "1d6ae7f24ced3a0fa7b5613b32f4a589bb4881e3946a5a2c3724056254ada3a9"
 
 CFLAGS += "-fno-strict-aliasing"
-inherit autotools-brokensep
+inherit autotools-brokensep systemd
 
 EXTRA_OEMAKE = 'CHECK_RUN_DIR=0 CXFLAGS="${CFLAGS}"'
 # PPC64 and MIPS64 uses long long for u64 in the kernel, but powerpc's asm/types.h
@@ -34,7 +44,7 @@ CFLAGS_append_mipsarchn32 = ' -D__SANE_USERSPACE_TYPES__'
 
 do_compile() {
 	# Point to right sbindir
-	sed -i -e "s;BINDIR  = /sbin;BINDIR = $base_sbindir;" ${S}/Makefile
+	sed -i -e "s;BINDIR  = /sbin;BINDIR = $base_sbindir;" -e "s;UDEVDIR = /lib;UDEVDIR = $nonarch_base_libdir;" ${S}/Makefile
 	oe_runmake SYSROOT="${STAGING_DIR_TARGET}"
 }
 
@@ -43,14 +53,24 @@ do_install() {
 	autotools_do_install
 }
 
-inherit ptest
+do_install_append() {
+    install -d ${D}/${sysconfdir}/
+    install -m 644 ${S}/mdadm.conf-example ${D}${sysconfdir}/mdadm.conf
+    install -d ${D}/${systemd_unitdir}/system
+    install -m 644 ${S}/systemd/mdmonitor.service ${D}/${systemd_unitdir}/system
+    install -d ${D}/${sysconfdir}/init.d
+    install -m 755 ${WORKDIR}/mdadm.init    ${D}${sysconfdir}/init.d/mdmonitor
+}
+
+SYSTEMD_SERVICE_${PN} = "mdmonitor.service"
+SYSTEMD_AUTO_ENABLE = "disable"
 
 do_compile_ptest() {
 	oe_runmake test
 }
 
 do_install_ptest() {
-	cp -a ${S}/tests ${D}${PTEST_PATH}/tests
+	cp -R --no-dereference --preserve=mode,links -v ${S}/tests ${D}${PTEST_PATH}/tests
 	cp ${S}/test ${D}${PTEST_PATH}
 	sed -e 's!sleep 0.*!sleep 1!g; s!/var/tmp!/!g' -i ${D}${PTEST_PATH}/test
 	ln -s ${base_sbindir}/mdadm ${D}${PTEST_PATH}/mdadm
@@ -59,6 +79,7 @@ do_install_ptest() {
 		install -D -m 755 $prg ${D}${PTEST_PATH}/
 	done
 }
+
 RDEPENDS_${PN}-ptest += "bash"
 RRECOMMENDS_${PN}-ptest += " \
     coreutils \

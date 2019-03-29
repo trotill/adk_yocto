@@ -1,4 +1,5 @@
 import bb.siggen
+import oe
 
 def sstate_rundepfilter(siggen, fn, recipename, task, dep, depname, dataCache):
     # Return True if we should keep the dependency, False to drop it
@@ -20,17 +21,20 @@ def sstate_rundepfilter(siggen, fn, recipename, task, dep, depname, dataCache):
     def isImage(fn):
         return "/image.bbclass" in " ".join(dataCache.inherits[fn])
 
-    # Always include our own inter-task dependencies
+    # (Almost) always include our own inter-task dependencies.
+    # The exception is the special do_kernel_configme->do_unpack_and_patch
+    # dependency from archiver.bbclass.
     if recipename == depname:
+        if task == "do_kernel_configme" and dep.endswith(".do_unpack_and_patch"):
+            return False
         return True
-
-    # Quilt (patch application) changing isn't likely to affect anything
-    excludelist = ['quilt-native', 'subversion-native', 'git-native']
-    if depname in excludelist and recipename != depname:
-        return False
 
     # Exclude well defined recipe->dependency
     if "%s->%s" % (recipename, depname) in siggen.saferecipedeps:
+        return False
+
+    # Check for special wildcard
+    if "*->%s" % depname in siggen.saferecipedeps and recipename != depname:
         return False
 
     # Don't change native/cross/nativesdk recipe dependencies any further
@@ -41,7 +45,7 @@ def sstate_rundepfilter(siggen, fn, recipename, task, dep, depname, dataCache):
 
     # allarch packagegroups are assumed to have well behaved names which don't change between architecures/tunes
     if isPackageGroup(fn) and isAllArch(fn) and not isNative(depname):
-        return False  
+        return False
 
     # Exclude well defined machine specific configurations which don't change ABI
     if depname in siggen.abisaferecipes and not isImage(fn):
@@ -146,16 +150,23 @@ class SignatureGeneratorOEBasicHash(bb.siggen.SignatureGeneratorBasicHash):
         if recipename in self.unlockedrecipes:
             unlocked = True
         else:
+            def get_mc(tid):
+                tid = tid.rsplit('.', 1)[0]
+                if tid.startswith('multiconfig:'):
+                    elems = tid.split(':')
+                    return elems[1]
             def recipename_from_dep(dep):
                 # The dep entry will look something like
                 # /path/path/recipename.bb.task, virtual:native:/p/foo.bb.task,
                 # ...
+
                 fn = dep.rsplit('.', 1)[0]
                 return dataCache.pkg_fn[fn]
 
+            mc = get_mc(fn)
             # If any unlocked recipe is in the direct dependencies then the
             # current recipe should be unlocked as well.
-            depnames = [ recipename_from_dep(x) for x in deps ]
+            depnames = [ recipename_from_dep(x) for x in deps if mc == get_mc(x)]
             if any(x in y for y in depnames for x in self.unlockedrecipes):
                 self.unlockedrecipes[recipename] = ''
                 unlocked = True
@@ -316,7 +327,7 @@ def find_siginfo(pn, taskname, taskhashlist, d):
 
     if not taskhashlist or (len(filedates) < 2 and not foundall):
         # That didn't work, look in sstate-cache
-        hashes = taskhashlist or ['*']
+        hashes = taskhashlist or ['?' * 32]
         localdata = bb.data.createCopy(d)
         for hashval in hashes:
             localdata.setVar('PACKAGE_ARCH', '*')
@@ -364,3 +375,43 @@ def sstate_get_manifest_filename(task, d):
     if extrainf:
         d2.setVar("SSTATE_MANMACH", extrainf)
     return (d2.expand("${SSTATE_MANFILEPREFIX}.%s" % task), d2)
+
+def find_sstate_manifest(taskdata, taskdata2, taskname, d, multilibcache):
+    d2 = d
+    variant = ''
+    curr_variant = ''
+    if d.getVar("BBEXTENDCURR") == "multilib":
+        curr_variant = d.getVar("BBEXTENDVARIANT")
+        if "virtclass-multilib" not in d.getVar("OVERRIDES"):
+            curr_variant = "invalid"
+    if taskdata2.startswith("virtual:multilib"):
+        variant = taskdata2.split(":")[2]
+    if curr_variant != variant:
+        if variant not in multilibcache:
+            multilibcache[variant] = oe.utils.get_multilib_datastore(variant, d)
+        d2 = multilibcache[variant]
+
+    if taskdata.endswith("-native"):
+        pkgarchs = ["${BUILD_ARCH}"]
+    elif taskdata.startswith("nativesdk-"):
+        pkgarchs = ["${SDK_ARCH}_${SDK_OS}", "allarch"]
+    elif "-cross-canadian" in taskdata:
+        pkgarchs = ["${SDK_ARCH}_${SDK_ARCH}-${SDKPKGSUFFIX}"]
+    elif "-cross-" in taskdata:
+        pkgarchs = ["${BUILD_ARCH}_${TARGET_ARCH}"]
+    elif "-crosssdk" in taskdata:
+        pkgarchs = ["${BUILD_ARCH}_${SDK_ARCH}_${SDK_OS}"]
+    else:
+        pkgarchs = ['${MACHINE_ARCH}']
+        pkgarchs = pkgarchs + list(reversed(d2.getVar("PACKAGE_EXTRA_ARCHS").split()))
+        pkgarchs.append('allarch')
+        pkgarchs.append('${SDK_ARCH}_${SDK_ARCH}-${SDKPKGSUFFIX}')
+
+    for pkgarch in pkgarchs:
+        manifest = d2.expand("${SSTATE_MANIFESTS}/manifest-%s-%s.%s" % (pkgarch, taskdata, taskname))
+        if os.path.exists(manifest):
+            return manifest, d2
+    bb.warn("Manifest %s not found in %s (variant '%s')?" % (manifest, d2.expand(" ".join(pkgarchs)), variant))
+    return None, d2
+
+

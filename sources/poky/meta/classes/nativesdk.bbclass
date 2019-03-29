@@ -12,6 +12,11 @@ MACHINEOVERRIDES = ""
 
 MULTILIBS = ""
 
+# we need consistent staging dir whether or not multilib is enabled
+STAGING_DIR_HOST = "${WORKDIR}/recipe-sysroot"
+STAGING_DIR_TARGET = "${WORKDIR}/recipe-sysroot"
+RECIPE_SYSROOT = "${WORKDIR}/recipe-sysroot"
+
 #
 # Update PACKAGE_ARCH and PACKAGE_ARCHS
 #
@@ -74,11 +79,10 @@ python nativesdk_virtclass_handler () {
     # from modifying nativesdk distro features
     features = set(d.getVar("DISTRO_FEATURES_NATIVESDK").split())
     filtered = set(bb.utils.filter("DISTRO_FEATURES", d.getVar("DISTRO_FEATURES_FILTER_NATIVESDK"), d).split())
-    d.setVar("DISTRO_FEATURES", " ".join(features | filtered))
+    d.setVar("DISTRO_FEATURES", " ".join(sorted(features | filtered)))
 
     e.data.setVar("MLPREFIX", "nativesdk-")
     e.data.setVar("PN", "nativesdk-" + e.data.getVar("PN").replace("-nativesdk", "").replace("nativesdk-", ""))
-    e.data.setVar("OVERRIDES", e.data.getVar("OVERRIDES", False) + ":virtclass-nativesdk")
 }
 
 python () {

@@ -10,11 +10,12 @@ ROOTFS_PKGMANAGE = "opkg ${EXTRAOPKGCONFIG}"
 
 do_rootfs[depends] += "opkg-native:do_populate_sysroot opkg-utils-native:do_populate_sysroot"
 do_populate_sdk[depends] += "opkg-native:do_populate_sysroot opkg-utils-native:do_populate_sysroot"
-do_rootfs[recrdeptask] += "do_package_write_ipk"
+do_rootfs[recrdeptask] += "do_package_write_ipk do_package_qa"
 do_rootfs[vardeps] += "PACKAGE_FEED_URIS"
 
 do_rootfs[lockfiles] += "${WORKDIR}/ipk.lock"
 do_populate_sdk[lockfiles] += "${WORKDIR}/ipk.lock"
+do_populate_sdk_ext[lockfiles] += "${WORKDIR}/ipk.lock"
 
 OPKG_PREPROCESS_COMMANDS = ""
 

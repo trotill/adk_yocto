@@ -51,7 +51,7 @@ class ConfigHandler(object):
 
     def __init__(self, filename):
         self.config_file = filename
-        self.config_obj = configparser.SafeConfigParser()
+        self.config_obj = configparser.ConfigParser()
 
     def get(self, section, option, default=None):
         try:
@@ -113,41 +113,30 @@ def read_workspace():
     externalsrc_re = re.compile(r'^EXTERNALSRC(_pn-([^ =]+))? *= *"([^"]*)"$')
     for fn in glob.glob(os.path.join(config.workspace_path, 'appends', '*.bbappend')):
         with open(fn, 'r') as f:
+            pnvalues = {}
             for line in f:
                 res = externalsrc_re.match(line.rstrip())
                 if res:
-                    pn = res.group(2) or os.path.splitext(os.path.basename(fn))[0].split('_')[0]
+                    recipepn = os.path.splitext(os.path.basename(fn))[0].split('_')[0]
+                    pn = res.group(2) or recipepn
                     # Find the recipe file within the workspace, if any
                     bbfile = os.path.basename(fn).replace('.bbappend', '.bb').replace('%', '*')
                     recipefile = glob.glob(os.path.join(config.workspace_path,
                                                         'recipes',
-                                                        pn,
+                                                        recipepn,
                                                         bbfile))
                     if recipefile:
                         recipefile = recipefile[0]
-                    workspace[pn] = {'srctree': res.group(3),
-                                     'bbappend': fn,
-                                     'recipefile': recipefile}
-                    logger.debug('Found recipe %s' % workspace[pn])
-
-def create_unlockedsigs():
-    """ This function will make unlocked-sigs.inc match the recipes in the
-    workspace. This runs on every run of devtool, but it lets us ensure
-    the unlocked items are in sync with the workspace. """
-
-    confdir = os.path.join(basepath, 'conf')
-    unlockedsigs = os.path.join(confdir, 'unlocked-sigs.inc')
-    bb.utils.mkdirhier(confdir)
-    with open(os.path.join(confdir, 'unlocked-sigs.inc'), 'w') as f:
-        f.write("# DO NOT MODIFY! YOUR CHANGES WILL BE LOST.\n" +
-                "# This layer was created by the OpenEmbedded devtool" +
-                " utility in order to\n" +
-                "# contain recipes that are unlocked.\n")
-
-        f.write('SIGGEN_UNLOCKED_RECIPES += "\\\n')
-        for pn in workspace:
-            f.write('    ' + pn)
-        f.write('"')
+                    pnvalues['srctree'] = res.group(3)
+                    pnvalues['bbappend'] = fn
+                    pnvalues['recipefile'] = recipefile
+                elif line.startswith('# srctreebase: '):
+                    pnvalues['srctreebase'] = line.split(':', 1)[1].strip()
+            if pnvalues:
+                if not pnvalues.get('srctreebase', None):
+                    pnvalues['srctreebase'] = pnvalues['srctree']
+                logger.debug('Found recipe %s' % pnvalues)
+                workspace[pn] = pnvalues
 
 def create_workspace(args, config, basepath, workspace):
     if args.layerpath:
@@ -176,6 +165,7 @@ def _create_workspace(workspacedir, config, basepath):
             f.write('BBFILE_PATTERN_workspacelayer = "^$' + '{LAYERDIR}/"\n')
             f.write('BBFILE_PATTERN_IGNORE_EMPTY_workspacelayer = "1"\n')
             f.write('BBFILE_PRIORITY_workspacelayer = "99"\n')
+            f.write('LAYERSERIES_COMPAT_workspacelayer = "${LAYERSERIES_COMPAT_core}"\n')
         # Add a README file
         with open(os.path.join(workspacedir, 'README'), 'w') as f:
             f.write('This layer was created by the OpenEmbedded devtool utility in order to\n')
@@ -201,7 +191,11 @@ def _enable_workspace_layer(workspacedir, config, basepath):
     if not os.path.exists(bblayers_conf):
         logger.error('Unable to find bblayers.conf')
         return
-    _, added = bb.utils.edit_bblayers_conf(bblayers_conf, workspacedir, config.workspace_path)
+    if os.path.abspath(workspacedir) != os.path.abspath(config.workspace_path):
+        removedir = config.workspace_path
+    else:
+        removedir = None
+    _, added = bb.utils.edit_bblayers_conf(bblayers_conf, workspacedir, removedir)
     if added:
         logger.info('Enabling workspace layer in bblayers.conf')
     if config.workspace_path != workspacedir:
@@ -332,7 +326,6 @@ def main():
 
     if not getattr(args, 'no_workspace', False):
         read_workspace()
-        create_unlockedsigs()
 
     try:
         ret = args.func(args, config, basepath, workspace)

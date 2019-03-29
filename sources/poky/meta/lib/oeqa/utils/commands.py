@@ -13,6 +13,7 @@ import sys
 import signal
 import subprocess
 import threading
+import time
 import logging
 from oeqa.utils import CommandError
 from oeqa.utils import ftools
@@ -25,7 +26,7 @@ except ImportError:
     pass
 
 class Command(object):
-    def __init__(self, command, bg=False, timeout=None, data=None, **options):
+    def __init__(self, command, bg=False, timeout=None, data=None, output_log=None, **options):
 
         self.defaultopts = {
             "stdout": subprocess.PIPE,
@@ -48,41 +49,106 @@ class Command(object):
         self.options.update(options)
 
         self.status = None
+        # We collect chunks of output before joining them at the end.
+        self._output_chunks = []
+        self._error_chunks = []
         self.output = None
         self.error = None
-        self.thread = None
+        self.threads = []
 
+        self.output_log = output_log
         self.log = logging.getLogger("utils.commands")
 
     def run(self):
         self.process = subprocess.Popen(self.cmd, **self.options)
 
-        def commThread():
-            self.output, self.error = self.process.communicate(self.data)
+        def readThread(output, stream, logfunc):
+            if logfunc:
+                for line in stream:
+                    output.append(line)
+                    logfunc(line.decode("utf-8", errors='replace').rstrip())
+            else:
+                output.append(stream.read())
 
-        self.thread = threading.Thread(target=commThread)
-        self.thread.start()
+        def readStderrThread():
+            readThread(self._error_chunks, self.process.stderr, self.output_log.error if self.output_log else None)
+
+        def readStdoutThread():
+            readThread(self._output_chunks, self.process.stdout, self.output_log.info if self.output_log else None)
+
+        def writeThread():
+            try:
+                self.process.stdin.write(self.data)
+                self.process.stdin.close()
+            except OSError as ex:
+                # It's not an error when the command does not consume all
+                # of our data. subprocess.communicate() also ignores that.
+                if ex.errno != EPIPE:
+                    raise
+
+        # We write in a separate thread because then we can read
+        # without worrying about deadlocks. The additional thread is
+        # expected to terminate by itself and we mark it as a daemon,
+        # so even it should happen to not terminate for whatever
+        # reason, the main process will still exit, which will then
+        # kill the write thread.
+        if self.data:
+            threading.Thread(target=writeThread, daemon=True).start()
+        if self.process.stderr:
+            thread = threading.Thread(target=readStderrThread)
+            thread.start()
+            self.threads.append(thread)
+        if self.output_log:
+            self.output_log.info('Running: %s' % self.cmd)
+        thread = threading.Thread(target=readStdoutThread)
+        thread.start()
+        self.threads.append(thread)
 
         self.log.debug("Running command '%s'" % self.cmd)
 
         if not self.bg:
-            self.thread.join(self.timeout)
+            if self.timeout is None:
+                for thread in self.threads:
+                    thread.join()
+            else:
+                deadline = time.time() + self.timeout
+                for thread in self.threads:
+                    timeout = deadline - time.time() 
+                    if timeout < 0:
+                        timeout = 0
+                    thread.join(timeout)
             self.stop()
 
     def stop(self):
-        if self.thread.isAlive():
-            self.process.terminate()
+        for thread in self.threads:
+            if thread.isAlive():
+                self.process.terminate()
             # let's give it more time to terminate gracefully before killing it
-            self.thread.join(5)
-            if self.thread.isAlive():
+            thread.join(5)
+            if thread.isAlive():
                 self.process.kill()
-                self.thread.join()
+                thread.join()
 
-        if not self.output:
-            self.output = ""
-        else:
-            self.output = self.output.decode("utf-8", errors='replace').rstrip()
-        self.status = self.process.poll()
+        def finalize_output(data):
+            if not data:
+                data = ""
+            else:
+                data = b"".join(data)
+                data = data.decode("utf-8", errors='replace').rstrip()
+            return data
+
+        self.output = finalize_output(self._output_chunks)
+        self._output_chunks = None
+        # self.error used to be a byte string earlier, probably unintentionally.
+        # Now it is a normal string, just like self.output.
+        self.error = finalize_output(self._error_chunks)
+        self._error_chunks = None
+        # At this point we know that the process has closed stdout/stderr, so
+        # it is safe and necessary to wait for the actual process completion.
+        self.status = self.process.wait()
+        self.process.stdout.close()
+        if self.process.stderr:
+            self.process.stderr.close()
 
         self.log.debug("Command '%s' returned %d as exit code." % (self.cmd, self.status))
         # logging the complete output is insane
@@ -98,7 +164,7 @@ class Result(object):
 
 
 def runCmd(command, ignore_status=False, timeout=None, assert_error=True,
-          native_sysroot=None, limit_exc_output=0, **options):
+          native_sysroot=None, limit_exc_output=0, output_log=None, **options):
     result = Result()
 
     if native_sysroot:
@@ -108,7 +174,7 @@ def runCmd(command, ignore_status=False, timeout=None, assert_error=True,
         nenv['PATH'] = extra_paths + ':' + nenv.get('PATH', '')
         options['env'] = nenv
 
-    cmd = Command(command, timeout=timeout, **options)
+    cmd = Command(command, timeout=timeout, output_log=output_log, **options)
     cmd.run()
 
     result.command = command
@@ -132,7 +198,7 @@ def runCmd(command, ignore_status=False, timeout=None, assert_error=True,
     return result
 
 
-def bitbake(command, ignore_status=False, timeout=None, postconfig=None, **options):
+def bitbake(command, ignore_status=False, timeout=None, postconfig=None, output_log=None, **options):
 
     if postconfig:
         postconfig_file = os.path.join(os.environ.get('BUILDDIR'), 'oeqa-post.conf')
@@ -147,7 +213,7 @@ def bitbake(command, ignore_status=False, timeout=None, postconfig=None, **optio
         cmd = [ "bitbake" ] + [a for a in (command + extra_args.split(" ")) if a not in [""]]
 
     try:
-        return runCmd(cmd, ignore_status, timeout, **options)
+        return runCmd(cmd, ignore_status, timeout, output_log=output_log, **options)
     finally:
         if postconfig:
             os.remove(postconfig_file)
@@ -164,7 +230,7 @@ def get_bb_vars(variables=None, target=None, postconfig=None):
     bbenv = get_bb_env(target, postconfig=postconfig)
 
     if variables is not None:
-        variables = variables.copy()
+        variables = list(variables)
     var_re = re.compile(r'^(export )?(?P<var>\w+(_.*)?)="(?P<value>.*)"$')
     unset_re = re.compile(r'^unset (?P<var>\w+)$')
     lastline = None
@@ -222,7 +288,7 @@ def create_temp_layer(templayerdir, templayername, priority=999, recipepathspec=
         f.write('BBFILE_PATTERN_%s = "^${LAYERDIR}/"\n' % templayername)
         f.write('BBFILE_PRIORITY_%s = "%d"\n' % (templayername, priority))
         f.write('BBFILE_PATTERN_IGNORE_EMPTY_%s = "1"\n' % templayername)
-
+        f.write('LAYERSERIES_COMPAT_%s = "${LAYERSERIES_COMPAT_core}"\n' % templayername)
 
 @contextlib.contextmanager
 def runqemu(pn, ssh=True, runqemuparams='', image_fstype=None, launch_cmd=None, qemuparams=None, overrides={}, discard_writes=True):
@@ -232,6 +298,12 @@ def runqemu(pn, ssh=True, runqemuparams='', image_fstype=None, launch_cmd=None, 
 
     import bb.tinfoil
     import bb.build
+
+    # Need a non-'BitBake' logger to capture the runner output
+    targetlogger = logging.getLogger('TargetRunner')
+    targetlogger.setLevel(logging.DEBUG)
+    handler = logging.StreamHandler(sys.stdout)
+    targetlogger.addHandler(handler)
 
     tinfoil = bb.tinfoil.Tinfoil()
     tinfoil.prepare(config_only=False, quiet=True)
@@ -250,41 +322,30 @@ def runqemu(pn, ssh=True, runqemuparams='', image_fstype=None, launch_cmd=None, 
         for key, value in overrides.items():
             recipedata.setVar(key, value)
 
-        # The QemuRunner log is saved out, but we need to ensure it is at the right
-        # log level (and then ensure that since it's a child of the BitBake logger,
-        # we disable propagation so we don't then see the log events on the console)
-        logger = logging.getLogger('BitBake.QemuRunner')
-        logger.setLevel(logging.DEBUG)
-        logger.propagate = False
         logdir = recipedata.getVar("TEST_LOG_DIR")
 
-        qemu = oeqa.targetcontrol.QemuTarget(recipedata, image_fstype)
+        qemu = oeqa.targetcontrol.QemuTarget(recipedata, targetlogger, image_fstype)
     finally:
         # We need to shut down tinfoil early here in case we actually want
         # to run tinfoil-using utilities with the running QEMU instance.
         # Luckily QemuTarget doesn't need it after the constructor.
         tinfoil.shutdown()
 
-    # Setup bitbake logger as console handler is removed by tinfoil.shutdown
-    bblogger = logging.getLogger('BitBake')
-    bblogger.setLevel(logging.INFO)
-    console = logging.StreamHandler(sys.stdout)
-    bbformat = bb.msg.BBLogFormatter("%(levelname)s: %(message)s")
-    if sys.stdout.isatty():
-        bbformat.enable_color()
-    console.setFormatter(bbformat)
-    bblogger.addHandler(console)
-
     try:
         qemu.deploy()
         try:
             qemu.start(params=qemuparams, ssh=ssh, runqemuparams=runqemuparams, launch_cmd=launch_cmd, discard_writes=discard_writes)
         except bb.build.FuncFailed:
-            raise Exception('Failed to start QEMU - see the logs in %s' % logdir)
+            msg = 'Failed to start QEMU - see the logs in %s' % logdir
+            if os.path.exists(qemu.qemurunnerlog):
+                with open(qemu.qemurunnerlog, 'r') as f:
+                    msg = msg + "Qemurunner log output from %s:\n%s" % (qemu.qemurunnerlog, f.read())
+            raise Exception(msg)
 
         yield qemu
 
     finally:
+        targetlogger.removeHandler(handler)
         try:
             qemu.stop()
         except:

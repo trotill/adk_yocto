@@ -7,12 +7,18 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=2ee41112a44fe7014dce33e26468ba93"
 
 SECTION = "net"
 
+DEPENDS_append_libc-musl = " libexecinfo"
+
 SRC_URI = "http://monkey-project.com/releases/1.5/monkey-${PV}.tar.gz \
+           file://0001-configure-Respect-LIBS-variable-from-env.patch \
            file://monkey.service \
            file://monkey.init"
 
 SRC_URI[md5sum] = "9699e4c9ea6ce6b989907c252ae80254"
 SRC_URI[sha256sum] = "7c3d845306aa74ee6effd7ab6169d16ac4e6450e564954d0d0baa2d1e9be1a22"
+
+UPSTREAM_CHECK_URI = "https://github.com/monkey/monkey/releases"
+UPSTREAM_CHECK_REGEX = "v(?P<pver>\d+(\.\d+)+).tar.gz"
 
 EXTRA_OECONF = "--plugdir=${libdir}/monkey/ \
                 --logdir=${localstatedir}/log/monkey/ \
@@ -24,7 +30,13 @@ EXTRA_OECONF = "--plugdir=${libdir}/monkey/ \
                 --disable-plugins=mbedtls \
                 --debug \
                 --malloc-libc"
+
+do_configure_prepend_libc-musl() {
+	export LIBS="-lexecinfo"
+}
+
 DISABLE_STATIC = ""
+CLEANBROKEN = "1"
 
 inherit autotools-brokensep pkgconfig update-rc.d systemd
 

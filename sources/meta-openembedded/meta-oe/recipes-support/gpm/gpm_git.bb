@@ -9,13 +9,15 @@ PV = "1.99.7+git${SRCREV}"
 PR = "r2"
 SRCREV = "1fd19417b8a4dd9945347e98dfa97e4cfd798d77"
 
-DEPENDS = "ncurses"
+DEPENDS = "ncurses bison-native"
 
 SRC_URI = "git://github.com/telmich/gpm;protocol=git \
+           file://init \
            file://no-docs.patch \
            file://processcreds.patch \
            file://gpm.service.in \
-           file://init"
+           file://0001-Use-sigemptyset-API-instead-of-__sigemptyset.patch \
+           "
 
 S = "${WORKDIR}/git"
 

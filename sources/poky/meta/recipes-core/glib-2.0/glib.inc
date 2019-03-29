@@ -3,14 +3,13 @@ DESCRIPTION = "GLib is a general-purpose utility library, which provides many us
 HOMEPAGE = "https://developer.gnome.org/glib/"
 
 # pcre is under BSD;
-# docs/reference/COPYING is with a 'public domai'-like license!
-LICENSE = "LGPLv2+ & BSD & PD"
-LIC_FILES_CHKSUM = "file://COPYING;md5=3bf50002aefd002f49e7bb854063f7e7 \
-                    file://glib/glib.h;beginline=4;endline=17;md5=b4f0f4a399c19e5ebb20c31b79d6bc32 \
-                    file://gmodule/COPYING;md5=3bf50002aefd002f49e7bb854063f7e7 \
-                    file://gmodule/gmodule.h;beginline=4;endline=17;md5=b4f0f4a399c19e5ebb20c31b79d6bc32 \
-                    file://glib/pcre/COPYING;md5=266ebc3ff74ee9ce6fad65577667c0f4 \
-                    file://glib/pcre/pcre.h;beginline=11;endline=35;md5=de27f2bf633d20a2b7af0b1983423283 \
+# docs/reference/COPYING is with a 'public domain'-like license!
+LICENSE = "LGPLv2.1+ & BSD & PD"
+LIC_FILES_CHKSUM = "file://COPYING;md5=4fbd65380cdd255951079008b364516c \
+                    file://glib/glib.h;beginline=4;endline=17;md5=b88abb7f3ad09607e71cb9d530155906 \
+                    file://gmodule/COPYING;md5=4fbd65380cdd255951079008b364516c \
+                    file://gmodule/gmodule.h;beginline=4;endline=17;md5=b88abb7f3ad09607e71cb9d530155906 \
+                    file://glib/pcre/pcre.h;beginline=8;endline=36;md5=3e2977dae4ad05217f58c446237298fc \
                     file://docs/reference/COPYING;md5=f51a5100c17af6bae00735cd791e1fcc"
 BUGTRACKER = "http://bugzilla.gnome.org"
 SECTION = "libs"
@@ -19,16 +18,18 @@ CVE_PRODUCT = "glib"
 
 BBCLASSEXTEND = "native nativesdk"
 
-DEPENDS = "virtual/libiconv libffi zlib glib-2.0-native"
-DEPENDS_append = " ${@bb.utils.contains('PTEST_ENABLED', '1', ' dbus', '', d)}"
-DEPENDS_class-native = "pkgconfig-native gettext-native libffi-native zlib-native"
-DEPENDS_class-nativesdk = "nativesdk-libtool nativesdk-gettext nativesdk-libffi nativesdk-zlib glib-2.0-native"
+DEPENDS = "glib-2.0-native \
+           virtual/libintl \
+           virtual/libiconv \
+           libffi \
+           zlib \
+           ${@bb.utils.contains('PTEST_ENABLED', '1', 'dbus', '', d)}"
 
 PACKAGES += "${PN}-codegen ${PN}-utils"
 
 LEAD_SONAME = "libglib-2.0.*"
 
-inherit autotools gettext gtk-doc pkgconfig ptest-gnome upstream-version-is-even bash-completion gio-module-cache python3native manpages
+inherit autotools gettext gtk-doc pkgconfig ptest-gnome upstream-version-is-even bash-completion gio-module-cache manpages
 
 S = "${WORKDIR}/glib-${PV}"
 
@@ -37,18 +38,18 @@ PACKAGECONFIG ??= "system-pcre libmount"
 PACKAGECONFIG[system-pcre] = "--with-pcre=system,--with-pcre=internal,libpcre"
 PACKAGECONFIG[libmount] = "--enable-libmount,--disable-libmount,util-linux"
 PACKAGECONFIG[manpages] = "--enable-man --with-xml-catalog=${STAGING_ETCDIR_NATIVE}/xml/catalog.xml, --disable-man, libxslt-native xmlto-native"
+PACKAGECONFIG[libelf] = "--enable-libelf,--disable-libelf,elfutils"
 
-CORECONF = "--disable-dtrace --disable-fam --disable-libelf --disable-systemtap"
+CORECONF = "--disable-dtrace --disable-fam --disable-systemtap"
 
 PRINTF = "--enable-included-printf=no"
 PRINTF_darwin = "--enable-included-printf=yes"
 PRINTF_mingw32 = "--enable-included-printf=yes"
 EXTRA_OECONF = "${PRINTF} ${CORECONF}"
 EXTRA_OECONF_class-native = "${CORECONF} --disable-selinux"
-EXTRA_OECONF_append_libc-uclibc = " --with-libiconv=gnu"
 
 # Tell configure that we'll have dbus-daemon on the target for the tests
-EXTRA_OECONF_class-target_append = " ${@bb.utils.contains('PTEST_ENABLED', '1', ' ac_cv_prog_DBUS_DAEMON=dbus-daemon', '', d)}"
+EXTRA_OECONF_append_class-target = " ${@bb.utils.contains('PTEST_ENABLED', '1', ' ac_cv_prog_DBUS_DAEMON=dbus-daemon', '', d)}"
 
 do_configure_prepend() {
 	sed -i -e '1s,#!.*,#!${USRBINPATH}/env python3,' ${S}/gio/gdbus-2.0/codegen/gdbus-codegen.in
@@ -67,11 +68,16 @@ FILES_${PN}-dev += "${libdir}/glib-2.0/include \
                     ${bindir}/glib-compile-resources \
                     ${datadir}/glib-2.0/gettext/po/Makefile.in.in \
                     ${datadir}/glib-2.0/schemas/gschema.dtd \
+                    ${datadir}/glib-2.0/valgrind/glib.supp \
                     ${datadir}/gettext/its"
 FILES_${PN}-dbg += "${datadir}/glib-2.0/gdb ${datadir}/gdb"
 FILES_${PN}-codegen = "${datadir}/glib-2.0/codegen/*.py \
                        ${bindir}/gdbus-codegen"
 FILES_${PN}-utils = "${bindir}/*"
+
+RRECOMMENDS_${PN} += "shared-mime-info"
+# When cross compiling for Windows we don't want to include this
+RRECOMMENDS_${PN}_remove_mingw32 = "shared-mime-info"
 
 ARM_INSTRUCTION_SET_armv4 = "arm"
 ARM_INSTRUCTION_SET_armv5 = "arm"
@@ -79,7 +85,14 @@ ARM_INSTRUCTION_SET_armv5 = "arm"
 # doesn't support mips16e
 CPPFLAGS_append_class-target_mips16e = " -DNVALGRIND=1"
 
-USE_NLS = "yes"
+# GLib generally requires gettext to be present so for USE_NLS to yes.  For
+# native builds as i18n is disabled globally we have to add a gettext-native dependency.
+USE_NLS_class-target = "yes"
+USE_NLS_class-nativesdk = "yes"
+DEPENDS_append_class-native = " gettext-native"
+
+EXEEXT = ""
+EXEEXT_mingw32 = ".exe"
 
 do_install_append () {
 	if [ -f ${D}${bindir}/gtester-report ]; then
@@ -91,31 +104,30 @@ do_install_append () {
 	rm -f ${D}${datadir}/glib-2.0/codegen/*.pyc
 	rm -f ${D}${datadir}/glib-2.0/codegen/*.pyo
 
-	# Some distros have both /bin/perl and /usr/bin/perl, but we set perl location
-	# for target as /usr/bin/perl, so fix it to /usr/bin/perl.
-	if [ -f ${D}${bindir}/glib-mkenums ]; then
-		sed -i -e '1s,#!.*perl,#! ${USRBINPATH}/env perl,' ${D}${bindir}/glib-mkenums
-	fi
-
 	if [ -e ${D}${libdir}/charset.alias ]; then
 		rm -f ${D}${libdir}/charset.alias
 	fi
+
+        # Make sure gio-querymodules is unique among multilibs
+        if test "x${MLPREFIX}" != "x"; then
+                mv ${D}${libexecdir}/gio-querymodules${EXEEXT} ${D}${libexecdir}/${MLPREFIX}gio-querymodules${EXEEXT}
+        fi
 }
 
 do_install_append_class-target () {
 	# Tests are only installed on targets, not native builds.  Separating this out
-	# keeps glib-2.0-native from depending on ${DISTRO_FEATURES}
+	# keeps glib-2.0-native from depending on DISTRO_FEATURES
 	if [ -f ${D}${datadir}/installed-tests/glib/gdbus-serialization.test ]; then
 		if ${@bb.utils.contains("DISTRO_FEATURES", "x11", "false", "true", d)}; then
 			rm ${D}${datadir}/installed-tests/glib/gdbus-serialization.test
 		fi
 	fi
-
-	# Make sure gio-querymodules is unique among multilibs
-	if test "x${MLPREFIX}" != "x"; then
-		mv ${D}${libexecdir}/gio-querymodules ${D}${libexecdir}/${MLPREFIX}gio-querymodules
-	fi
 }
+
+CODEGEN_PYTHON_RDEPENDS = "python3 python3-distutils python3-xml"
+CODEGEN_PYTHON_RDEPENDS_mingw32 = ""
+
+RDEPENDS_${PN}-codegen += "${CODEGEN_PYTHON_RDEPENDS}"
 
 RDEPENDS_${PN}-ptest += "\
             dbus \
@@ -128,6 +140,8 @@ RDEPENDS_${PN}-ptest += "\
             shared-mime-info \
            "
 
+# When https://gitlab.gnome.org/GNOME/glib/issues/1343 is
+# fixed add locale-base-pl-pl
 RDEPENDS_${PN}-ptest_append_libc-glibc = "\
             glibc-gconv-utf-16 \
             glibc-charmap-utf-8 \
@@ -140,6 +154,17 @@ RDEPENDS_${PN}-ptest_append_libc-glibc = "\
             glibc-gconv-iso8859-15 \
             glibc-charmap-invariant \
             glibc-localedata-translit-cjk-variants \
+            locale-base-tr-tr \
+            locale-base-lt-lt \
+            locale-base-ja-jp.euc-jp \
+            locale-base-fa-ir \
+            locale-base-ru-ru \
+            locale-base-de-de \
+            locale-base-hr-hr \
+            locale-base-el-gr \
+            locale-base-fr-fr \
+            locale-base-es-es \
+            locale-base-en-gb \
            "
 
 INSANE_SKIP_${PN}-ptest += "libdir"

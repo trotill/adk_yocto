@@ -1,4 +1,4 @@
-From 71bd0082c6edcf73f054a8a4fa34bd8dd4de7cd7 Mon Sep 17 00:00:00 2001
+From 7dab2995ed8eeccd7b0acd79668bc28f3a2427d5 Mon Sep 17 00:00:00 2001
 From: Robert Yang <liezhi.yang@windriver.com>
 Date: Wed, 16 Sep 2015 19:45:40 -0700
 Subject: [PATCH] dev.mk.in: fix file name too long
@@ -10,12 +10,13 @@ to fix the problem.
 Upstream-Status: Pending
 
 Signed-off-by: Robert Yang <liezhi.yang@windriver.com>
+
 ---
- dev.mk.in |    2 +-
+ dev.mk.in | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/dev.mk.in b/dev.mk.in
-index 1261ad3..ec55ac4 100644
+index 91b0a57..583ade0 100644
 --- a/dev.mk.in
 +++ b/dev.mk.in
 @@ -1,7 +1,7 @@
@@ -25,8 +26,5 @@ index 1261ad3..ec55ac4 100644
 -all_cppflags += -MD -MP -MF .deps/$(subst .._,,$(subst /,_,$<)).d
 +all_cppflags += -MD -MP -MF .deps/$(subst .._,,$(subst /,_,$(subst $(srcdir)/,,$<))).d
  
+ A2X = a2x
  ASCIIDOC = asciidoc
- GPERF = gperf
--- 
-1.7.9.5
-

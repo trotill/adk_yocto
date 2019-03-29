@@ -121,8 +121,15 @@ class ToasterSetting(models.Model):
 
 
 class ProjectManager(models.Manager):
-    def create_project(self, name, release):
-        if release is not None:
+    def create_project(self, name, release, existing_project=None):
+        if existing_project and (release is not None):
+            prj = existing_project
+            prj.bitbake_version = release.bitbake_version
+            prj.release = release
+            # Delete the previous ProjectLayer mappings
+            for pl in ProjectLayer.objects.filter(project=prj):
+                pl.delete()
+        elif release is not None:
             prj = self.model(name=name,
                              bitbake_version=release.bitbake_version,
                              release=release)
@@ -130,15 +137,14 @@ class ProjectManager(models.Manager):
             prj = self.model(name=name,
                              bitbake_version=None,
                              release=None)
-
         prj.save()
 
         for defaultconf in ToasterSetting.objects.filter(
                 name__startswith="DEFCONF_"):
             name = defaultconf.name[8:]
-            ProjectVariable.objects.create(project=prj,
-                                           name=name,
-                                           value=defaultconf.value)
+            pv,create = ProjectVariable.objects.get_or_create(project=prj,name=name)
+            pv.value = defaultconf.value
+            pv.save()
 
         if release is None:
             return prj
@@ -196,6 +202,11 @@ class Project(models.Model):
     # hard links to possibly missing models
     user_id = models.IntegerField(null=True)
     objects = ProjectManager()
+
+    # build directory override (e.g. imported)
+    builddir = models.TextField()
+    # merge the Toaster configure attributes directly into the standard conf files
+    merged_attr = models.BooleanField(default=False)
 
     # set to True for the project which is the default container
     # for builds initiated by the command line etc.
@@ -305,6 +316,15 @@ class Project(models.Model):
             return layer_versions
 
 
+    def get_default_image_recipe(self):
+        try:
+            return self.projectvariable_set.get(name="DEFAULT_IMAGE").value
+        except (ProjectVariable.DoesNotExist,IndexError):
+            return None;
+
+    def get_is_new(self):
+        return self.get_variable(Project.PROJECT_SPECIFIC_ISNEW)
+
     def get_available_machines(self):
         """ Returns QuerySet of all Machines which are provided by the
         Layers currently added to the Project """
@@ -317,6 +337,22 @@ class Project(models.Model):
         """ Returns QuerySet of all the compatible machines available to the
         project including ones from Layers not currently added """
         queryset = Machine.objects.filter(
+            layer_version__in=self.get_all_compatible_layer_versions())
+
+        return queryset
+
+    def get_available_distros(self):
+        """ Returns QuerySet of all Distros which are provided by the
+        Layers currently added to the Project """
+        queryset = Distro.objects.filter(
+            layer_version__in=self.get_project_layer_versions())
+
+        return queryset
+
+    def get_all_compatible_distros(self):
+        """ Returns QuerySet of all the compatible Wind River distros available to the
+        project including ones from Layers not currently added """
+        queryset = Distro.objects.filter(
             layer_version__in=self.get_all_compatible_layer_versions())
 
         return queryset
@@ -336,6 +372,32 @@ class Project(models.Model):
             layer_version__in=self.get_all_compatible_layer_versions()).exclude(name__exact='')
 
         return queryset
+
+    # Project Specific status management
+    PROJECT_SPECIFIC_STATUS = 'INTERNAL_PROJECT_SPECIFIC_STATUS'
+    PROJECT_SPECIFIC_CALLBACK = 'INTERNAL_PROJECT_SPECIFIC_CALLBACK'
+    PROJECT_SPECIFIC_ISNEW = 'INTERNAL_PROJECT_SPECIFIC_ISNEW'
+    PROJECT_SPECIFIC_DEFAULTIMAGE = 'PROJECT_SPECIFIC_DEFAULTIMAGE'
+    PROJECT_SPECIFIC_NONE = ''
+    PROJECT_SPECIFIC_NEW = '1'
+    PROJECT_SPECIFIC_EDIT = '2'
+    PROJECT_SPECIFIC_CLONING = '3'
+    PROJECT_SPECIFIC_CLONING_SUCCESS = '4'
+    PROJECT_SPECIFIC_CLONING_FAIL = '5'
+
+    def get_variable(self,variable,default_value = ''):
+        try:
+            return self.projectvariable_set.get(name=variable).value
+        except (ProjectVariable.DoesNotExist,IndexError):
+            return default_value
+
+    def set_variable(self,variable,value):
+        pv,create = ProjectVariable.objects.get_or_create(project = self, name = variable)
+        pv.value = value
+        pv.save()
+
+    def get_default_image(self):
+        return self.get_variable(Project.PROJECT_SPECIFIC_DEFAULTIMAGE)
 
     def schedule_build(self):
 
@@ -435,7 +497,16 @@ class Build(models.Model):
     recipes_to_parse = models.IntegerField(default=1)
 
     # number of recipes parsed so far for this build
-    recipes_parsed = models.IntegerField(default=0)
+    recipes_parsed = models.IntegerField(default=1)
+
+    # number of repos to clone for this build
+    repos_to_clone = models.IntegerField(default=1)
+
+    # number of repos cloned so far for this build (default off)
+    repos_cloned = models.IntegerField(default=1)
+
+    # Hint on current progress item
+    progress_item = models.CharField(max_length=40)
 
     @staticmethod
     def get_recent(project=None):
@@ -486,7 +557,7 @@ class Build(models.Model):
         tf = Task.objects.filter(build = self)
         tfc = tf.count()
         if tfc > 0:
-            completeper = tf.exclude(order__isnull=True).count()*100 // tfc
+            completeper = tf.exclude(outcome=Task.OUTCOME_NA).count()*100 // tfc
         else:
             completeper = 0
         return completeper
@@ -667,6 +738,13 @@ class Build(models.Model):
         else:
             return False
 
+    def is_cloning(self):
+        """
+        True if the build is still cloning repos
+        """
+        return self.outcome == Build.IN_PROGRESS and \
+            self.repos_cloned < self.repos_to_clone
+
     def is_parsing(self):
         """
         True if the build is still parsing recipes
@@ -680,10 +758,11 @@ class Build(models.Model):
         tasks.
 
         Note that the mechanism for testing whether a Task is "done" is whether
-        its order field is set, as per the completeper() method.
+        its outcome field is set, as per the completeper() method.
         """
         return self.outcome == Build.IN_PROGRESS and \
-            self.task_build.filter(order__isnull=False).count() == 0
+            self.task_build.exclude(outcome=Task.OUTCOME_NA).count() == 0
+
 
     def get_state(self):
         """
@@ -698,6 +777,8 @@ class Build(models.Model):
             return 'Cancelling';
         elif self.is_queued():
             return 'Queued'
+        elif self.is_cloning():
+            return 'Cloning'
         elif self.is_parsing():
             return 'Parsing'
         elif self.is_starting():
@@ -1485,12 +1566,12 @@ class Layer_Version(models.Model):
         return self._handle_url_path(self.layer.vcs_web_tree_base_url, '')
 
     def get_vcs_reference(self):
+        if self.commit is not None and len(self.commit) > 0:
+            return self.commit
         if self.branch is not None and len(self.branch) > 0:
             return self.branch
         if self.release is not None:
             return self.release.name
-        if self.commit is not None and len(self.commit) > 0:
-            return self.commit
         return 'N/A'
 
     def get_detailspage_url(self, project_id=None):
@@ -1626,10 +1707,13 @@ class CustomImageRecipe(Recipe):
 
     def get_base_recipe_file(self):
         """Get the base recipe file path if it exists on the file system"""
-        path_schema_one = "%s/%s" % (self.base_recipe.layer_version.dirpath,
+        path_schema_one = "%s/%s" % (self.base_recipe.layer_version.local_path,
                                      self.base_recipe.file_path)
 
         path_schema_two = self.base_recipe.file_path
+
+        path_schema_three = "%s/%s" % (self.base_recipe.layer_version.layer.local_source_dir,
+                                     self.base_recipe.file_path)
 
         if os.path.exists(path_schema_one):
             return path_schema_one
@@ -1637,6 +1721,10 @@ class CustomImageRecipe(Recipe):
         # The path may now be the full path if the recipe has been built
         if os.path.exists(path_schema_two):
             return path_schema_two
+
+        # Or a local path if all layers are local
+        if os.path.exists(path_schema_three):
+            return path_schema_three
 
         return None
 
@@ -1662,8 +1750,8 @@ class CustomImageRecipe(Recipe):
         if base_recipe_path:
             base_recipe = open(base_recipe_path, 'r').read()
         else:
-            raise IOError("Based on recipe file not found: %s" %
-                          base_recipe_path)
+            # Pass back None to trigger error message to user
+            return None
 
         # Add a special case for when the recipe we have based a custom image
         # recipe on requires another recipe.
@@ -1779,6 +1867,21 @@ def signal_runbuilds():
             os.kill(int(pidf.read()), SIGUSR1)
     except FileNotFoundError:
         logger.info("Stopping existing runbuilds: no current process found")
+
+class Distro(models.Model):
+    search_allowed_fields = ["name", "description", "layer_version__layer__name"]
+    up_date = models.DateTimeField(null = True, default = None)
+
+    layer_version = models.ForeignKey('Layer_Version')
+    name = models.CharField(max_length=255)
+    description = models.CharField(max_length=255)
+
+    def get_vcs_distro_file_link_url(self):
+        path = 'conf/distro/%s.conf' % self.name
+        return self.layer_version.get_vcs_file_link_url(path)
+
+    def __unicode__(self):
+        return "Distro " + self.name + "(" + self.description + ")"
 
 django.db.models.signals.post_save.connect(invalidate_cache)
 django.db.models.signals.post_delete.connect(invalidate_cache)

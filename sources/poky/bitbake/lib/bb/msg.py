@@ -40,6 +40,7 @@ class BBLogFormatter(logging.Formatter):
     VERBOSE = logging.INFO - 1
     NOTE = logging.INFO
     PLAIN = logging.INFO + 1
+    VERBNOTE = logging.INFO + 2
     ERROR = logging.ERROR
     WARNING = logging.WARNING
     CRITICAL = logging.CRITICAL
@@ -51,6 +52,7 @@ class BBLogFormatter(logging.Formatter):
         VERBOSE: 'NOTE',
         NOTE    : 'NOTE',
         PLAIN  : '',
+        VERBNOTE: 'NOTE',
         WARNING : 'WARNING',
         ERROR   : 'ERROR',
         CRITICAL: 'ERROR',
@@ -66,6 +68,7 @@ class BBLogFormatter(logging.Formatter):
         VERBOSE : BASECOLOR,
         NOTE    : BASECOLOR,
         PLAIN   : BASECOLOR,
+        VERBNOTE: BASECOLOR,
         WARNING : YELLOW,
         ERROR   : RED,
         CRITICAL: RED,
@@ -216,3 +219,10 @@ def logger_create(name, output=sys.stderr, level=logging.INFO, preserve_handlers
         logger.handlers = [console]
     logger.setLevel(level)
     return logger
+
+def has_console_handler(logger):
+    for handler in logger.handlers:
+        if isinstance(handler, logging.StreamHandler):
+            if handler.stream in [sys.stderr, sys.stdout]:
+                return True
+    return False

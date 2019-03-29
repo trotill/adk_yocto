@@ -15,12 +15,16 @@ SRCREV = "c22d359433b333937ee3d803450dc41998115685"
 
 DEPENDS = "elfutils"
 RDEPENDS_${PN} = "elfutils"
-SRC_URI = "git://anonscm.debian.org/collab-maint/ltrace.git;branch=master \
+SRC_URI = "git://github.com/sparkleholic/ltrace.git;branch=master;protocol=http \
            file://configure-allow-to-disable-selinux-support.patch \
            file://0001-replace-readdir_r-with-readdir.patch \
            file://0001-Use-correct-enum-type.patch \
            file://0002-Fix-const-qualifier-error.patch \
            file://0001-ARM-code-has-unreachable-code-after-switch-statement.patch \
+           file://0001-Fix-tautological-compare-warning.patch \
+           file://0001-Add-support-for-mips64-n32-n64.patch \
+           file://0001-configure-Recognise-linux-musl-as-a-host-OS.patch \
+           file://0001-mips-plt.c-Delete-include-error.h.patch \
            "
 S = "${WORKDIR}/git"
 

@@ -1,5 +1,5 @@
+FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}-${PV}:"
 require recipes-kernel/linux/linux-imx.inc
-require recipes-kernel/linux/linux-dtb.inc
 
 SUMMARY = "Linux kernel for Toradex Colibri VFxx Computer on Modules"
 
@@ -8,8 +8,11 @@ SRC_URI = "git://git.toradex.com/linux-toradex.git;protocol=git;branch=${SRCBRAN
 
 KERNEL_MODULE_AUTOLOAD += "${@bb.utils.contains('COMBINED_FEATURES', 'usbgadget', ' libcomposite', '',d)}"
 
-LOCALVERSION = "-v2.6b2"
-SRCBRANCH = "toradex_vf_4.4"
-SRCREV = "efe965a5dad66bd14219cdc9474ea75eda783456"
+LOCALVERSION = "-2.8.3"
+PV_append = "+git${SRCPV}"
+
+SRCBRANCH = "toradex_vf_4.4-next"
+SRCREV = "166cb6f4a4aff202d98914fe0c5530d26ce671a5"
+
 DEPENDS += "lzop-native bc-native"
 COMPATIBLE_MACHINE = "(vf)"

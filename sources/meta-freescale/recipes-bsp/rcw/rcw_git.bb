@@ -1,31 +1,30 @@
 SUMMARY = "Reset Configuration Word"
 DESCRIPTION = "Reset Configuration Word - hardware boot-time parameters for the QorIQ targets"
 LICENSE = "BSD"
-LIC_FILES_CHKSUM = "file://COPYING;md5=3775480a712fc46a69647678acb234cb"
+LIC_FILES_CHKSUM = "file://LICENSE;md5=45a017ee5f4cfe64b1cddf2eb06cffc7"
 
 DEPENDS += "change-file-endianess-native tcl-native"
 
-inherit deploy
+inherit deploy siteinfo
 
-SRC_URI = "git://git.freescale.com/ppc/sdk/rcw.git;nobranch=1"
-SRCREV = "7bd43d920065171a8d805a3d02fa4c0b39885664"
+SRC_URI = "git://source.codeaurora.org/external/qoriq/qoriq-components/rcw;nobranch=1"
+SRCREV = "17254ac35250197877c6321f9d13e33b1f85388a"
 
 S = "${WORKDIR}/git"
 
 export PYTHON = "${USRBINPATH}/python2"
 
-EXTRA_OEMAKE = "BOARDS=${@d.getVar('MACHINE', True).replace('-64b','').replace('-32b','')} DESTDIR=${D}/boot/rcw/"
+M="${@d.getVar('MACHINE', True).replace('-64b','').replace('-32b','').replace('-${SITEINFO_ENDIANNESS}','')}"
 
 do_install () {
-    oe_runmake install
-    for f in `find ${D}/boot/rcw/ -name "*qspiboot*"`;do
-        if echo $f |grep -q "qspiboot_sben"; then
-            continue
-        fi
-        f_swap=`echo $f |sed -e 's/qspiboot/qspiboot_swap/'`
-        tclsh ${STAGING_BINDIR_NATIVE}/byte_swap.tcl $f $f_swap 8
-        mv -f $f_swap $f
-    done
+    if [ ${M} = ls2088ardb ]; then
+        oe_runmake BOARDS=${M} DESTDIR=${D}/boot/rcw/ install
+        oe_runmake BOARDS=${M}_rev1.1  DESTDIR=${D}/boot/rcw/ install
+    elif [ ${M} = ls1088ardb-pb ]; then
+        oe_runmake BOARDS=ls1088ardb DESTDIR=${D}/boot/rcw/ install
+    else
+        oe_runmake BOARDS=${M} DESTDIR=${D}/boot/rcw/ install
+    fi
 }
 
 do_deploy () {

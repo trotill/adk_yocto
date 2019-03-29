@@ -1,11 +1,15 @@
 HOMEPAGE = "https://github.com/firehol/netdata/"
 SUMMARY = "Real-time performance monitoring"
 LICENSE = "GPLv3"
-LIC_FILES_CHKSUM = "file://LICENSE.md;md5=747afe070ea9d6c2be0a31353609a35b"
+LIC_FILES_CHKSUM = "file://LICENSE.md;md5=95b49e9ea979a337578f13c2a3ab9535 \
+                    file://COPYING;md5=d32239bcb673463ab874e80d47fae504 \
+                   "
 
-SRC_URI = "git://github.com/firehol/netdata.git;protocol=https"
-SRCREV = "36c1304e37094174ea51001903058e65053107ca"
-PV = "1.0.1+git${SRCPV}"
+SRC_URI = "git://github.com/firehol/netdata.git;protocol=https \
+           file://0001-makefile-Do-not-build-contrib-dir.patch \
+"
+SRCREV = "89ed309252981ddd50f697fde4fe93019cb3e652"
+PV = "1.8.0+git${SRCPV}"
 
 # patch to disable timeout because timeout are not available with actual version
 # of core-utils
@@ -19,7 +23,7 @@ SRC_URI += "file://netdata.service"
 
 S = "${WORKDIR}/git"
 
-DEPENDS += "zlib"
+DEPENDS += "zlib util-linux"
 
 inherit pkgconfig autotools useradd systemd
 

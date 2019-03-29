@@ -15,7 +15,7 @@ STAGING_BINDIR_TOOLCHAIN = "${STAGING_DIR_NATIVE}${bindir_native}/${SDK_ARCH}${S
 # Update BASE_PACKAGE_ARCH and PACKAGE_ARCHS
 #
 PACKAGE_ARCH = "${SDK_ARCH}-${SDKPKGSUFFIX}"
-BASECANADIANEXTRAOS ?= "linux-uclibc linux-musl"
+BASECANADIANEXTRAOS ?= "linux-musl"
 CANADIANEXTRAOS = "${BASECANADIANEXTRAOS}"
 CANADIANEXTRAVENDOR = ""
 MODIFYTOS ??= "1"
@@ -30,17 +30,15 @@ python () {
     if d.getVar("MODIFYTOS") != "1":
         return
 
-    if d.getVar("TCLIBC") == "baremetal":
+    if d.getVar("TCLIBC") in [ 'baremetal', 'newlib' ]:
         return
 
     tos = d.getVar("TARGET_OS")
     whitelist = []
     extralibcs = [""]
-    if "uclibc" in d.getVar("BASECANADIANEXTRAOS"):
-        extralibcs.append("uclibc")
     if "musl" in d.getVar("BASECANADIANEXTRAOS"):
         extralibcs.append("musl")
-    for variant in ["", "spe", "x32", "eabi", "n32"]:
+    for variant in ["", "spe", "x32", "eabi", "n32", "_ilp32"]:
         for libc in extralibcs:
             entry = "linux"
             if variant and libc:
@@ -80,7 +78,7 @@ python () {
         for extraos in d.getVar("BASECANADIANEXTRAOS").split():
             d.appendVar("CANADIANEXTRAOS", " " + extraos + "n32")
     if tarch == "arm" or tarch == "armeb":
-        d.appendVar("CANADIANEXTRAOS", " linux-gnueabi linux-musleabi linux-uclibceabi")
+        d.appendVar("CANADIANEXTRAOS", " linux-gnueabi linux-musleabi")
         d.setVar("TARGET_OS", "linux-gnueabi")
     else:
         d.setVar("TARGET_OS", "linux")
@@ -115,11 +113,6 @@ HOST_CC_ARCH = "${SDK_CC_ARCH}"
 HOST_LD_ARCH = "${SDK_LD_ARCH}"
 HOST_AS_ARCH = "${SDK_AS_ARCH}"
 
-TARGET_CPPFLAGS = "${BUILDSDK_CPPFLAGS}"
-TARGET_CFLAGS = "${BUILDSDK_CFLAGS}"
-TARGET_CXXFLAGS = "${BUILDSDK_CXXFLAGS}"
-TARGET_LDFLAGS = "${BUILDSDK_LDFLAGS}"
-
 #assign DPKG_ARCH
 DPKG_ARCH = "${@debian_arch_map(d.getVar('SDK_ARCH'), '')}"
 
@@ -129,8 +122,6 @@ CXXFLAGS = "${BUILDSDK_CFLAGS}"
 LDFLAGS = "${BUILDSDK_LDFLAGS} \
            -Wl,-rpath-link,${STAGING_LIBDIR}/.. \
            -Wl,-rpath,${libdir}/.. "
-
-DEPENDS_GETTEXT = "gettext-native nativesdk-gettext"
 
 #
 # We need chrpath >= 0.14 to ensure we can deal with 32 and 64 bit

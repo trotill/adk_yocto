@@ -1,4 +1,4 @@
-{% extends "baseprojectpage.html" %}
+{% extends project_specific|yesno:"baseprojectspecificpage.html,baseprojectpage.html" %}
 {% load projecttags %}
 {% load humanize %}
 
@@ -41,7 +41,7 @@
       </div>
       <button id="apply-change-dl_dir" class="btn btn-default" type="button">Save</button>
       <button id="cancel-change-dl_dir" type="button" class="btn btn-link">Cancel</button>
-      <p class="help-block" id="hintError-dl_dir" style="display:none;">The directory path cannot include spaces or any of these characters: . \ ? % * : | " " &lt; &gt;</p>
+      <p class="help-block" id="hintError-dl_dir" style="display:none;">The directory path cannot include spaces or any of these characters: \ ? % * : | " " &lt; &gt;</p>
       <p class="help-block" id="hintError-initialChar-dl_dir" style="display:none;">The directory path should either start with a /, e.g. /home/toaster/downloads; or with a variable, e.g. ${TOPDIR}/downloads.</p>
     </form>
     </dd>
@@ -63,6 +63,7 @@
         <button id="cancel-change-image_fstypes" type="button" class="btn btn-link">Cancel</button>
       </div>
       <p class="help-block text-danger" style="display:none;" id="hintError-image-fs_type">A valid image type cannot include underscores</p>
+      <p class="help-block text-danger" style="display:none;" id="fstypes-error-message">You must select at least one image type</p>
       <label>Or choose from known image types:</label>
       <input id="filter-image_fstypes" type="text" placeholder="Search image types" class="form-control">
       <div id="all-image_fstypes" class="scrolling"></div>
@@ -150,7 +151,7 @@
       </div>
       <button id="apply-change-sstate_dir" class="btn btn-default" type="button">Save</button>
       <button id="cancel-change-sstate_dir" type="button" class="btn btn-link">Cancel</button>
-      <p class="help-block" id="hintError-sstate_dir" style="display:none;">The directory path cannot include spaces or any of these characters: . \ ? % * : | " " &lt; &gt;</p>
+      <p class="help-block" id="hintError-sstate_dir" style="display:none;">The directory path cannot include spaces or any of these characters: \ ? % * : | " " &lt; &gt;</p>
       <p class="help-block" id="hintError-initialChar-sstate_dir" style="display:none;">The directory path should either start with a /, e.g. /home/toaster/sstate-cache; or with a variable, e.g. ${TOPDIR}/sstate-cache.</p>
     </form>
     </dd>
@@ -437,8 +438,11 @@ function onEditPageUpdate(data) {
         var_context='m';
       }
     }
+    if (configvars_sorted[i][0].startsWith("INTERNAL_")) {
+        var_context='m';
+    }
     if (var_context == undefined) {
-      orightml += '<dt><span id="config_var_entry_'+configvars_sorted[i][2]+'" class="js-config-var-name"></span><span class="glyphicon glyphicon-trash js-icon-trash-config_var" id="config_var_trash_'+configvars_sorted[i][2]+'" x-data="'+configvars_sorted[i][2]+'"></span> </dt>'
+        orightml += '<dt><span id="config_var_entry_'+configvars_sorted[i][2]+'" class="js-config-var-name"></span><span class="glyphicon glyphicon-trash js-icon-trash-config_var" id="config_var_trash_'+configvars_sorted[i][2]+'" x-data="'+configvars_sorted[i][2]+'"></span> </dt>'
         orightml += '<dd class="variable-list">'
         orightml += '    <span class="lead" id="config_var_value_'+configvars_sorted[i][2]+'"></span>'
         orightml += '    <span class="glyphicon glyphicon-edit js-icon-pencil-config_var" x-data="'+configvars_sorted[i][2]+'"></span>'
@@ -593,7 +597,7 @@ $(document).ready(function() {
       var input = $(this);
       var reBeginWithSlash = /^\//;
       var reCheckVariable = /^\$/;
-      var re = /([ <>\\|":\.%\?\*]+)/;
+      var re = /([ <>\\|":%\?\*]+)/;
       var invalidDir = re.test(input.val());
       var invalidSlash = reBeginWithSlash.test(input.val());
       var invalidVar = reCheckVariable.test(input.val());
@@ -716,8 +720,10 @@ $(document).ready(function() {
     }
     if ($('#new-imagefs_types').val().length === 0) {
       $("#apply-change-image_fstypes").prop("disabled", true);
+      $('#fstypes-error-message').show();
     } else {
       $("#apply-change-image_fstypes").prop("disabled", false);
+      $('#fstypes-error-message').hide();
     }
   });
 
@@ -958,7 +964,7 @@ $(document).ready(function() {
       var input = $(this);
       var reBeginWithSlash = /^\//;
       var reCheckVariable = /^\$/;
-      var re = /([ <>\\|":\.%\?\*]+)/;
+      var re = /([ <>\\|":%\?\*]+)/;
       var invalidDir = re.test(input.val());
       var invalidSlash = reBeginWithSlash.test(input.val());
       var invalidVar = reCheckVariable.test(input.val());

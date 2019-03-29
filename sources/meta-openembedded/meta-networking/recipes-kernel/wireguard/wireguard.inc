@@ -11,8 +11,7 @@ LICENSE = "GPLv2"
 LIC_FILES_CHKSUM = "file://../COPYING;md5=b234ee4d69f5fce4486a80fdaf4a4263"
 
 SRC_URI = "https://git.zx2c4.com/WireGuard/snapshot/WireGuard-${PV}.tar.xz"
-
-SRC_URI[md5sum] = "8e559f4fd672b15c38a15eb4d88cc84d"
-SRC_URI[sha256sum] = "03c82af774224cd171d000ee4a519b5e474cc6842ac04967773cf77b26750000"
+SRC_URI[md5sum] = "39bb99fe11356423fb1ab45ae2d938bb"
+SRC_URI[sha256sum] = "2b97697e9b271ba8836a04120a287b824648124f21d5309170ec51c1f86ac5ed"
 
 S = "${WORKDIR}/WireGuard-${PV}/src/"

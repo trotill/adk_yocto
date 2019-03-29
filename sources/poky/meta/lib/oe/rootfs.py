@@ -92,10 +92,6 @@ class Rootfs(object, metaclass=ABCMeta):
                 self.d.getVar('PACKAGE_FEED_ARCHS'))
 
 
-    @abstractmethod
-    def _handle_intercept_failure(self, failed_script):
-        pass
-
     """
     The _cleanup() method should be used to clean-up stuff that we don't really
     want to end up on target. For example, in the case of RPM, the DB locks.
@@ -148,6 +144,20 @@ class Rootfs(object, metaclass=ABCMeta):
         bb.note("  Install complementary '*-dbg' packages...")
         self.pm.install_complementary('*-dbg')
 
+        if self.d.getVar('PACKAGE_DEBUG_SPLIT_STYLE') == 'debug-with-srcpkg':
+            bb.note("  Install complementary '*-src' packages...")
+            self.pm.install_complementary('*-src')
+
+        """
+        Install additional debug packages. Possibility to install additional packages,
+        which are not automatically installed as complementary package of
+        standard one, e.g. debug package of static libraries.
+        """
+        extra_debug_pkgs = self.d.getVar('IMAGE_INSTALL_DEBUGFS')
+        if extra_debug_pkgs:
+            bb.note("  Install extra debug packages...")
+            self.pm.install(extra_debug_pkgs.split(), True)
+
         bb.note("  Rename debug rootfs...")
         try:
             shutil.rmtree(self.image_rootfs + '-dbg')
@@ -178,19 +188,9 @@ class Rootfs(object, metaclass=ABCMeta):
         post_process_cmds = self.d.getVar("ROOTFS_POSTPROCESS_COMMAND")
         rootfs_post_install_cmds = self.d.getVar('ROOTFS_POSTINSTALL_COMMAND')
 
-        postinst_intercepts_dir = self.d.getVar("POSTINST_INTERCEPTS_DIR")
-        if not postinst_intercepts_dir:
-            postinst_intercepts_dir = self.d.expand("${COREBASE}/scripts/postinst-intercepts")
-        intercepts_dir = os.path.join(self.d.getVar('WORKDIR'),
-                                      "intercept_scripts")
-
-        bb.utils.remove(intercepts_dir, True)
-
         bb.utils.mkdirhier(self.image_rootfs)
 
         bb.utils.mkdirhier(self.deploydir)
-
-        shutil.copytree(postinst_intercepts_dir, intercepts_dir)
 
         execute_pre_post_process(self.d, pre_process_cmds)
 
@@ -207,7 +207,7 @@ class Rootfs(object, metaclass=ABCMeta):
 
         execute_pre_post_process(self.d, rootfs_post_install_cmds)
 
-        self._run_intercepts()
+        self.pm.run_intercepts()
 
         execute_pre_post_process(self.d, post_process_cmds)
 
@@ -261,15 +261,22 @@ class Rootfs(object, metaclass=ABCMeta):
             # Remove components that we don't need if it's a read-only rootfs
             unneeded_pkgs = self.d.getVar("ROOTFS_RO_UNNEEDED").split()
             pkgs_installed = image_list_installed_packages(self.d)
-            # Make sure update-alternatives is last on the command line, so
-            # that it is removed last. This makes sure that its database is
-            # available while uninstalling packages, allowing alternative
-            # symlinks of packages to be uninstalled to be managed correctly.
+            # Make sure update-alternatives is removed last. This is
+            # because its database has to available while uninstalling
+            # other packages, allowing alternative symlinks of packages
+            # to be uninstalled or to be managed correctly otherwise.
             provider = self.d.getVar("VIRTUAL-RUNTIME_update-alternatives")
             pkgs_to_remove = sorted([pkg for pkg in pkgs_installed if pkg in unneeded_pkgs], key=lambda x: x == provider)
 
+            # update-alternatives provider is removed in its own remove()
+            # call because all package managers do not guarantee the packages
+            # are removed in the order they given in the list (which is
+            # passed to the command line). The sorting done earlier is
+            # utilized to implement the 2-stage removal.
+            if len(pkgs_to_remove) > 1:
+                self.pm.remove(pkgs_to_remove[:-1], False)
             if len(pkgs_to_remove) > 0:
-                self.pm.remove(pkgs_to_remove, False)
+                self.pm.remove([pkgs_to_remove[-1]], False)
 
         if delayed_postinsts:
             self._save_postinsts()
@@ -285,43 +292,6 @@ class Rootfs(object, metaclass=ABCMeta):
         if not runtime_pkgmanage:
             # Remove the package manager data files
             self.pm.remove_packaging_data()
-
-    def _run_intercepts(self):
-        intercepts_dir = os.path.join(self.d.getVar('WORKDIR'),
-                                      "intercept_scripts")
-
-        bb.note("Running intercept scripts:")
-        os.environ['D'] = self.image_rootfs
-        os.environ['STAGING_DIR_NATIVE'] = self.d.getVar('STAGING_DIR_NATIVE')
-        for script in os.listdir(intercepts_dir):
-            script_full = os.path.join(intercepts_dir, script)
-
-            if script == "postinst_intercept" or not os.access(script_full, os.X_OK):
-                continue
-
-            bb.note("> Executing %s intercept ..." % script)
-
-            try:
-                subprocess.check_output(script_full)
-            except subprocess.CalledProcessError as e:
-                bb.warn("The postinstall intercept hook '%s' failed (exit code: %d)! See log for details! (Output: %s)" %
-                        (script, e.returncode, e.output))
-
-                with open(script_full) as intercept:
-                    registered_pkgs = None
-                    for line in intercept.read().split("\n"):
-                        m = re.match("^##PKGS:(.*)", line)
-                        if m is not None:
-                            registered_pkgs = m.group(1).strip()
-                            break
-
-                    if registered_pkgs is not None:
-                        bb.warn("The postinstalls for the following packages "
-                                "will be postponed for first boot: %s" %
-                                registered_pkgs)
-
-                        # call the backend dependent handler
-                        self._handle_intercept_failure(registered_pkgs)
 
     def _run_ldconfig(self):
         if self.d.getVar('LDCONFIGDEPEND'):
@@ -515,16 +485,10 @@ class RpmRootfs(Rootfs):
         self._log_check_warn()
         self._log_check_error()
 
-    def _handle_intercept_failure(self, registered_pkgs):
-        rpm_postinsts_dir = self.image_rootfs + self.d.expand('${sysconfdir}/rpm-postinsts/')
-        bb.utils.mkdirhier(rpm_postinsts_dir)
-
-        # Save the package postinstalls in /etc/rpm-postinsts
-        for pkg in registered_pkgs.split():
-            self.pm.save_rpmpostinst(pkg)
-
     def _cleanup(self):
-        pass
+        if bb.utils.contains("IMAGE_FEATURES", "package-management", True, False, self.d):
+            self.pm._invoke_dnf(["clean", "all"])
+
 
 class DpkgOpkgRootfs(Rootfs):
     def __init__(self, d, progress_reporter=None, logcatcher=None):
@@ -611,6 +575,9 @@ class DpkgOpkgRootfs(Rootfs):
         return pkg_list
 
     def _save_postinsts_common(self, dst_postinst_dir, src_postinst_dir):
+        if bb.utils.contains("IMAGE_FEATURES", "package-management",
+                         True, False, self.d):
+            return
         num = 0
         for p in self._get_delayed_postinsts():
             bb.utils.mkdirhier(dst_postinst_dir)
@@ -701,9 +668,6 @@ class DpkgRootfs(DpkgOpkgRootfs):
         dst_postinst_dir = self.d.expand("${IMAGE_ROOTFS}${sysconfdir}/deb-postinsts")
         src_postinst_dir = self.d.expand("${IMAGE_ROOTFS}/var/lib/dpkg/info")
         return self._save_postinsts_common(dst_postinst_dir, src_postinst_dir)
-
-    def _handle_intercept_failure(self, registered_pkgs):
-        self.pm.mark_packages("unpacked", registered_pkgs.split())
 
     def _log_check(self):
         self._log_check_warn()
@@ -836,7 +800,7 @@ class OpkgRootfs(DpkgOpkgRootfs):
             ml_opkg_conf = os.path.join(ml_temp,
                                         variant + "-" + os.path.basename(self.opkg_conf))
 
-            ml_pm = OpkgPM(self.d, ml_target_rootfs, ml_opkg_conf, self.pkg_archs)
+            ml_pm = OpkgPM(self.d, ml_target_rootfs, ml_opkg_conf, self.pkg_archs, prepare_index=False)
 
             ml_pm.update()
             ml_pm.install(pkgs)
@@ -903,9 +867,8 @@ class OpkgRootfs(DpkgOpkgRootfs):
         opkg_pre_process_cmds = self.d.getVar('OPKG_PREPROCESS_COMMANDS')
         opkg_post_process_cmds = self.d.getVar('OPKG_POSTPROCESS_COMMANDS')
 
-        # update PM index files, unless users provide their own feeds
-        if (self.d.getVar('BUILD_IMAGES_FROM_FEEDS') or "") != "1":
-            self.pm.write_index()
+        # update PM index files
+        self.pm.write_index()
 
         execute_pre_post_process(self.d, opkg_pre_process_cmds)
 
@@ -972,9 +935,6 @@ class OpkgRootfs(DpkgOpkgRootfs):
         dst_postinst_dir = self.d.expand("${IMAGE_ROOTFS}${sysconfdir}/ipk-postinsts")
         src_postinst_dir = self.d.expand("${IMAGE_ROOTFS}${OPKGLIBDIR}/opkg/info")
         return self._save_postinsts_common(dst_postinst_dir, src_postinst_dir)
-
-    def _handle_intercept_failure(self, registered_pkgs):
-        self.pm.mark_packages("unpacked", registered_pkgs.split())
 
     def _log_check(self):
         self._log_check_warn()

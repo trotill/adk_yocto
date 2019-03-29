@@ -15,11 +15,13 @@
 # It is an error for the target not to exist.
 # If 'what' doesn't exist then an empty value is returned
 #
-def siteinfo_data(d):
+def siteinfo_data_for_machine(arch, os, d):
     archinfo = {
         "allarch": "endian-little bit-32", # bogus, but better than special-casing the checks below for allarch
         "aarch64": "endian-little bit-64 arm-common arm-64",
         "aarch64_be": "endian-big bit-64 arm-common arm-64",
+        "arc": "endian-little bit-32 arc-common",
+        "arceb": "endian-big bit-32 arc-common",
         "arm": "endian-little bit-32 arm-common arm-32",
         "armeb": "endian-big bit-32 arm-common arm-32",
         "avr32": "endian-big bit-32 avr32-common",
@@ -30,6 +32,8 @@ def siteinfo_data(d):
         "i586": "endian-little bit-32 ix86-common",
         "i686": "endian-little bit-32 ix86-common",
         "ia64": "endian-little bit-64",
+        "lm32": "endian-big bit-32",
+        "m68k": "endian-big bit-32",
         "microblaze": "endian-big bit-32 microblaze-common",
         "microblazeeb": "endian-big bit-32 microblaze-common",
         "microblazeel": "endian-little bit-32 microblaze-common",
@@ -47,6 +51,8 @@ def siteinfo_data(d):
         "ppc": "endian-big bit-32 powerpc-common",
         "ppc64": "endian-big bit-64 powerpc-common",
         "ppc64le" : "endian-little bit-64 powerpc-common",
+        "riscv32": "endian-little bit-32 riscv-common",
+        "riscv64": "endian-little bit-64 riscv-common",
         "sh3": "endian-little bit-32 sh-common",
         "sh4": "endian-little bit-32 sh-common",
         "sparc": "endian-big bit-32",
@@ -58,14 +64,13 @@ def siteinfo_data(d):
         "darwin9": "common-darwin",
         "linux": "common-linux common-glibc",
         "linux-gnu": "common-linux common-glibc",
+        "linux-gnu_ilp32": "common-linux common-glibc",
         "linux-gnux32": "common-linux common-glibc",
         "linux-gnun32": "common-linux common-glibc",
         "linux-gnueabi": "common-linux common-glibc",
         "linux-gnuspe": "common-linux common-glibc",
-        "linux-uclibc": "common-linux common-uclibc",
-        "linux-uclibceabi": "common-linux common-uclibc",
-        "linux-uclibcspe": "common-linux common-uclibc",
         "linux-musl": "common-linux common-musl",
+        "linux-muslx32": "common-linux common-musl",
         "linux-musleabi": "common-linux common-musl",
         "linux-muslspe": "common-linux common-musl",
         "uclinux-uclibc": "common-uclibc",
@@ -75,14 +80,18 @@ def siteinfo_data(d):
     targetinfo = {
         "aarch64-linux-gnu": "aarch64-linux",
         "aarch64_be-linux-gnu": "aarch64_be-linux",
+        "aarch64-linux-gnu_ilp32": "bit-32 aarch64_be-linux arm-32",
+        "aarch64_be-linux-gnu_ilp32": "bit-32 aarch64_be-linux arm-32",
         "aarch64-linux-musl": "aarch64-linux",
         "aarch64_be-linux-musl": "aarch64_be-linux",
         "arm-linux-gnueabi": "arm-linux",
         "arm-linux-musleabi": "arm-linux",
-        "arm-linux-uclibceabi": "arm-linux-uclibc",
         "armeb-linux-gnueabi": "armeb-linux",
-        "armeb-linux-uclibceabi": "armeb-linux-uclibc",
         "armeb-linux-musleabi": "armeb-linux",
+        "microblazeeb-linux" : "microblaze-linux",
+        "microblazeeb-linux-musl" : "microblaze-linux",
+        "microblazeel-linux" : "microblaze-linux",
+        "microblazeel-linux-musl" : "microblaze-linux",
         "mips-linux-musl": "mips-linux",
         "mipsel-linux-musl": "mipsel-linux",
         "mips64-linux-musl": "mips64-linux",
@@ -93,20 +102,22 @@ def siteinfo_data(d):
         "mipsisa64r6el-linux-gnun32": "mipsisa32r6el-linux bit-32",
         "powerpc-linux": "powerpc32-linux",
         "powerpc-linux-musl": "powerpc-linux powerpc32-linux",
-        "powerpc-linux-uclibc": "powerpc-linux powerpc32-linux",
         "powerpc-linux-gnuspe": "powerpc-linux powerpc32-linux",
         "powerpc-linux-muslspe": "powerpc-linux powerpc32-linux",
-        "powerpc-linux-uclibcspe": "powerpc-linux powerpc32-linux powerpc-linux-uclibc",
         "powerpc64-linux-gnuspe": "powerpc-linux powerpc64-linux",
         "powerpc64-linux-muslspe": "powerpc-linux powerpc64-linux",
         "powerpc64-linux": "powerpc-linux",
         "powerpc64-linux-musl": "powerpc-linux",
+        "riscv32-linux": "riscv32-linux",
+        "riscv32-linux-musl": "riscv32-linux",
+        "riscv64-linux": "riscv64-linux",
+        "riscv64-linux-musl": "riscv64-linux",
         "x86_64-cygwin": "bit-64",
         "x86_64-darwin": "bit-64",
         "x86_64-darwin9": "bit-64",
         "x86_64-linux": "bit-64",
         "x86_64-linux-musl": "x86_64-linux bit-64",
-        "x86_64-linux-uclibc": "bit-64",
+        "x86_64-linux-muslx32": "bit-32 ix86-common x32-linux",
         "x86_64-elf": "bit-64",
         "x86_64-linux-gnu": "bit-64 x86_64-linux",
         "x86_64-linux-gnux32": "bit-32 ix86-common x32-linux",
@@ -121,15 +132,13 @@ def siteinfo_data(d):
         locs = { "archinfo" : archinfo, "osinfo" : osinfo, "targetinfo" : targetinfo, "d" : d}
         archinfo, osinfo, targetinfo = bb.utils.better_eval(call, locs)
 
-    hostarch = d.getVar("HOST_ARCH")
-    hostos = d.getVar("HOST_OS")
-    target = "%s-%s" % (hostarch, hostos)
+    target = "%s-%s" % (arch, os)
 
     sitedata = []
-    if hostarch in archinfo:
-        sitedata.extend(archinfo[hostarch].split())
-    if hostos in osinfo:
-        sitedata.extend(osinfo[hostos].split())
+    if arch in archinfo:
+        sitedata.extend(archinfo[arch].split())
+    if os in osinfo:
+        sitedata.extend(osinfo[os].split())
     if target in targetinfo:
         sitedata.extend(targetinfo[target].split())
     sitedata.append(target)
@@ -137,6 +146,9 @@ def siteinfo_data(d):
 
     bb.debug(1, "SITE files %s" % sitedata);
     return sitedata
+
+def siteinfo_data(d):
+    return siteinfo_data_for_machine(d.getVar("HOST_ARCH"), d.getVar("HOST_OS"), d)
 
 python () {
     sitedata = set(siteinfo_data(d))
@@ -159,7 +171,7 @@ python () {
         bb.fatal("Please add your architecture to siteinfo.bbclass")
 }
 
-def siteinfo_get_files(d, aclocalcache = False):
+def siteinfo_get_files(d, sysrootcache = False):
     sitedata = siteinfo_data(d)
     sitefiles = ""
     for path in d.getVar("BBPATH").split(":"):
@@ -168,18 +180,11 @@ def siteinfo_get_files(d, aclocalcache = False):
             if os.path.exists(filename):
                 sitefiles += filename + " "
 
-    if not aclocalcache:
+    if not sysrootcache:
         return sitefiles
 
-    # Now check for siteconfig cache files in the directory setup by autotools.bbclass to
-    # avoid races.
-    #
-    # ACLOCALDIR may or may not exist so cache should only be set to True from autotools.bbclass
-    # after files have been copied into this location. To do otherwise risks parsing/signature
-    # issues and the directory being created/removed whilst this code executes. This can happen
-    # when a multilib recipe is parsed along with its base variant which may be running at the time
-    # causing rare but nasty failures
-    path_siteconfig = d.getVar('ACLOCALDIR')
+    # Now check for siteconfig cache files in sysroots
+    path_siteconfig = d.getVar('SITECONFIG_SYSROOTCACHE')
     if path_siteconfig and os.path.isdir(path_siteconfig):
         for i in os.listdir(path_siteconfig):
             if not i.endswith("_config"):

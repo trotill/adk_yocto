@@ -187,7 +187,7 @@ def explode_deps(s):
             #r[-1] += ' ' + ' '.join(j)
     return r
 
-def explode_dep_versions2(s):
+def explode_dep_versions2(s, *, sort=True):
     """
     Take an RDEPENDS style string of format:
     "DEPEND1 (optional version) DEPEND2 (optional version) ..."
@@ -250,7 +250,8 @@ def explode_dep_versions2(s):
         if not (i in r and r[i]):
             r[lastdep] = []
 
-    r = collections.OrderedDict(sorted(r.items(), key=lambda x: x[0]))
+    if sort:
+        r = collections.OrderedDict(sorted(r.items(), key=lambda x: x[0]))
     return r
 
 def explode_dep_versions(s):
@@ -496,7 +497,11 @@ def lockfile(name, shared=False, retry=True, block=False):
                 if statinfo.st_ino == statinfo2.st_ino:
                     return lf
             lf.close()
-        except Exception:
+        except OSError as e:
+            if e.errno == errno.EACCES:
+                logger.error("Unable to acquire lock '%s', %s",
+                             e.strerror, name)
+                sys.exit(1)
             try:
                 lf.close()
             except Exception:
@@ -523,12 +528,17 @@ def md5_file(filename):
     """
     Return the hex string representation of the MD5 checksum of filename.
     """
-    import hashlib
-    m = hashlib.md5()
+    import hashlib, mmap
 
     with open(filename, "rb") as f:
-        for line in f:
-            m.update(line)
+        m = hashlib.md5()
+        try:
+            with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mm:
+                for chunk in iter(lambda: mm.read(8192), b''):
+                    m.update(chunk)
+        except ValueError:
+            # You can't mmap() an empty file so silence this exception
+            pass
     return m.hexdigest()
 
 def sha256_file(filename):
@@ -680,7 +690,7 @@ def remove(path, recurse=False):
             if _check_unsafe_delete_path(path):
                 raise Exception('bb.utils.remove: called with dangerous path "%s" and recurse=True, refusing to delete!' % path)
         # shutil.rmtree(name) would be ideal but its too slow
-        subprocess.call(['rm', '-rf'] + glob.glob(path))
+        subprocess.check_call(['rm', '-rf'] + glob.glob(path))
         return
     for name in glob.glob(path):
         try:
@@ -771,13 +781,14 @@ def movefile(src, dest, newmtime = None, sstat = None):
             return None
 
     renamefailed = 1
+    # os.rename needs to know the dest path ending with file name
+    # so append the file name to a path only if it's a dir specified
+    srcfname = os.path.basename(src)
+    destpath = os.path.join(dest, srcfname) if os.path.isdir(dest) \
+                else dest
+
     if sstat[stat.ST_DEV] == dstat[stat.ST_DEV]:
         try:
-            # os.rename needs to know the dest path ending with file name
-            # so append the file name to a path only if it's a dir specified
-            srcfname = os.path.basename(src)
-            destpath = os.path.join(dest, srcfname) if os.path.isdir(dest) \
-                        else dest
             os.rename(src, destpath)
             renamefailed = 0
         except Exception as e:
@@ -791,8 +802,8 @@ def movefile(src, dest, newmtime = None, sstat = None):
         didcopy = 0
         if stat.S_ISREG(sstat[stat.ST_MODE]):
             try: # For safety copy then move it over.
-                shutil.copyfile(src, dest + "#new")
-                os.rename(dest + "#new", dest)
+                shutil.copyfile(src, destpath + "#new")
+                os.rename(destpath + "#new", destpath)
                 didcopy = 1
             except Exception as e:
                 print('movefile: copy', src, '->', dest, 'failed.', e)
@@ -805,17 +816,17 @@ def movefile(src, dest, newmtime = None, sstat = None):
                 return None # failure
         try:
             if didcopy:
-                os.lchown(dest, sstat[stat.ST_UID], sstat[stat.ST_GID])
-                os.chmod(dest, stat.S_IMODE(sstat[stat.ST_MODE])) # Sticky is reset on chown
+                os.lchown(destpath, sstat[stat.ST_UID], sstat[stat.ST_GID])
+                os.chmod(destpath, stat.S_IMODE(sstat[stat.ST_MODE])) # Sticky is reset on chown
                 os.unlink(src)
         except Exception as e:
             print("movefile: Failed to chown/chmod/unlink", dest, e)
             return None
 
     if newmtime:
-        os.utime(dest, (newmtime, newmtime))
+        os.utime(destpath, (newmtime, newmtime))
     else:
-        os.utime(dest, (sstat[stat.ST_ATIME], sstat[stat.ST_MTIME]))
+        os.utime(destpath, (sstat[stat.ST_ATIME], sstat[stat.ST_MTIME]))
         newmtime = sstat[stat.ST_MTIME]
     return newmtime
 
@@ -898,6 +909,23 @@ def copyfile(src, dest, newmtime = None, sstat = None):
         os.utime(dest, (sstat[stat.ST_ATIME], sstat[stat.ST_MTIME]))
         newmtime = sstat[stat.ST_MTIME]
     return newmtime
+
+def break_hardlinks(src, sstat = None):
+    """
+    Ensures src is the only hardlink to this file.  Other hardlinks,
+    if any, are not affected (other than in their st_nlink value, of
+    course).  Returns true on success and false on failure.
+
+    """
+    try:
+        if not sstat:
+            sstat = os.lstat(src)
+    except Exception as e:
+        logger.warning("break_hardlinks: stat of %s failed (%s)" % (src, e))
+        return False
+    if sstat[stat.ST_NLINK] == 1:
+        return True
+    return copyfile(src, src, sstat=sstat)
 
 def which(path, item, direction = 0, history = False, executable=False):
     """
@@ -1283,7 +1311,7 @@ def edit_metadata_file(meta_file, variables, varfunc):
     return updated
 
 
-def edit_bblayers_conf(bblayers_conf, add, remove):
+def edit_bblayers_conf(bblayers_conf, add, remove, edit_cb=None):
     """Edit bblayers.conf, adding and/or removing layers
     Parameters:
         bblayers_conf: path to bblayers.conf file to edit
@@ -1291,6 +1319,8 @@ def edit_bblayers_conf(bblayers_conf, add, remove):
             list to add nothing
         remove: layer path (or list of layer paths) to remove; None or
             empty list to remove nothing
+        edit_cb: optional callback function that will be called after
+            processing adds/removes once per existing entry.
     Returns a tuple:
         notadded: list of layers specified to be added but weren't
             (because they were already in the list)
@@ -1353,6 +1383,17 @@ def edit_bblayers_conf(bblayers_conf, add, remove):
                     updated = True
                     bblayers.append(addlayer)
             del addlayers[:]
+
+        if edit_cb:
+            newlist = []
+            for layer in bblayers:
+                res = edit_cb(layer, canonicalise_path(layer))
+                if res != layer:
+                    newlist.append(res)
+                    updated = True
+                else:
+                    newlist.append(layer)
+            bblayers = newlist
 
         if updated:
             if op == '+=' and not bblayers:
@@ -1502,7 +1543,7 @@ def export_proxies(d):
 
 def load_plugins(logger, plugins, pluginpath):
     def load_plugin(name):
-        logger.debug('Loading plugin %s' % name)
+        logger.debug(1, 'Loading plugin %s' % name)
         fp, pathname, description = imp.find_module(name, [pluginpath])
         try:
             return imp.load_module(name, fp, pathname, description)
@@ -1510,7 +1551,7 @@ def load_plugins(logger, plugins, pluginpath):
             if fp:
                 fp.close()
 
-    logger.debug('Loading plugins from %s...' % pluginpath)
+    logger.debug(1, 'Loading plugins from %s...' % pluginpath)
 
     expanded = (glob.glob(os.path.join(pluginpath, '*' + ext))
                 for ext in python_extensions)

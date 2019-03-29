@@ -8,12 +8,13 @@ IMAGE_LINGUAS ?= "en-us en-gb"
 ENABLE_BINARY_LOCALE_GENERATION ?= "1"
 LOCALE_UTF8_ONLY ?= "0"
 LOCALE_UTF8_IS_DEFAULT ?= "1"
+LOCALE_UTF8_IS_DEFAULT_class-nativesdk = "0"
 
 DISTRO_FEATURES_DEFAULT ?= "acl alsa argp bluetooth ext2 irda largefile pcmcia usbgadget usbhost wifi xattr nfs zeroconf pci 3g nfc x11"
 DISTRO_FEATURES_LIBC_DEFAULT ?= "ipv4 ipv6 libc-backtrace libc-big-macros libc-bsd libc-cxx-tests libc-catgets libc-charsets libc-crypt \
 					libc-crypt-ufc libc-db-aliases libc-envz libc-fcvt libc-fmtmsg libc-fstab libc-ftraverse \
 					libc-getlogin libc-idn libc-inet-anl libc-libm libc-locales libc-locale-code \
-					libc-memusage libc-nis libc-nsswitch libc-rcmd libc-rtld-debug libc-spawn libc-streams libc-sunrpc \
+					libc-memusage libc-nsswitch libc-rcmd libc-rtld-debug libc-spawn libc-streams \
 					libc-utmp libc-utmpx libc-wordexp libc-posix-clang-wchar libc-posix-regexp libc-posix-regexp-glibc \
 					libc-posix-wchar-io"
 DISTRO_FEATURES_LIBC ?= "${DISTRO_FEATURES_LIBC_DEFAULT}"
@@ -23,7 +24,6 @@ DISTRO_FEATURES ?= "${DISTRO_FEATURES_DEFAULT} ${DISTRO_FEATURES_LIBC}"
 IMAGE_FEATURES ?= ""
 
 WHITELIST_GPL-3.0 ?= ""
-LGPLv2_WHITELIST_GPL-3.0 ?= ""
 
 COMMERCIAL_AUDIO_PLUGINS ?= ""
 # COMMERCIAL_AUDIO_PLUGINS ?= "gst-plugins-ugly-mad gst-plugins-ugly-mpegaudioparse"
@@ -46,3 +46,9 @@ BB_STRICT_CHECKSUM = "1"
 
 GTK2DISTROFEATURES = "directfb x11"
 GTK3DISTROFEATURES = "x11 wayland"
+
+ARCH_DEFAULT_KERNELIMAGETYPE = "zImage"
+ARCH_DEFAULT_KERNELIMAGETYPE_x86 = "bzImage"
+ARCH_DEFAULT_KERNELIMAGETYPE_x86-64 = "bzImage"
+KERNEL_IMAGETYPE ??= "${ARCH_DEFAULT_KERNELIMAGETYPE}"
+KERNEL_IMAGETYPES ??= "${KERNEL_IMAGETYPE}"

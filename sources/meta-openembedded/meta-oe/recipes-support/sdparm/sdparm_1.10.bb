@@ -10,6 +10,9 @@ DEPENDS="sg3-utils"
 SRC_URI = "http://sg.danny.cz/sg/p/${BPN}-${PV}.tgz \
            file://make-sysroot-work.patch \
            "
+MIRRORS += "http://sg.danny.cz/sg/p https://fossies.org/linux/misc"
+
+UPSTREAM_CHECK_REGEX = "sdparm-(?P<pver>\d+(\.\d+)+)\.tgz"
 
 PACKAGES =+ "${PN}-scripts"
 RDEPENDS_${PN}-scripts += "bash ${PN}"

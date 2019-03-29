@@ -3,7 +3,7 @@ def gettext_dependencies(d):
         return ""
     if d.getVar('USE_NLS') == 'no':
         return "gettext-minimal-native"
-    return d.getVar('DEPENDS_GETTEXT', False)
+    return "gettext-native"
 
 def gettext_oeconf(d):
     if d.getVar('USE_NLS') == 'no':
@@ -13,7 +13,10 @@ def gettext_oeconf(d):
         return '--disable-nls'
     return "--enable-nls"
 
-DEPENDS_GETTEXT ??= "virtual/gettext gettext-native"
-
-BASEDEPENDS =+ "${@gettext_dependencies(d)}"
+BASEDEPENDS_append = " ${@gettext_dependencies(d)}"
 EXTRA_OECONF_append = " ${@gettext_oeconf(d)}"
+
+# Without this, msgfmt from gettext-native will not find ITS files
+# provided by target recipes (for example, polkit.its).
+GETTEXTDATADIRS_append_class-target = ":${STAGING_DATADIR}/gettext"
+export GETTEXTDATADIRS

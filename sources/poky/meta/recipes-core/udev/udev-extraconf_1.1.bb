@@ -1,4 +1,5 @@
 SUMMARY = "Extra machine specific configuration files"
+HOMEPAGE = "https://wiki.gentoo.org/wiki/Eudev"
 DESCRIPTION = "Extra machine specific configuration files for udev, specifically blacklist information."
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/COPYING.MIT;md5=3da9cfbcb788c80a0384361b4de20420"
@@ -28,6 +29,9 @@ do_install() {
     install -d ${D}${sysconfdir}/udev/scripts/
 
     install -m 0755 ${WORKDIR}/mount.sh ${D}${sysconfdir}/udev/scripts/mount.sh
+    sed -i 's|@systemd_unitdir@|${systemd_unitdir}|g' ${D}${sysconfdir}/udev/scripts/mount.sh
+    sed -i 's|@base_sbindir@|${base_sbindir}|g' ${D}${sysconfdir}/udev/scripts/mount.sh
+
     install -m 0755 ${WORKDIR}/network.sh ${D}${sysconfdir}/udev/scripts
 }
 

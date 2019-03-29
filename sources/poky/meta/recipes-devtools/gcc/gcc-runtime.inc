@@ -17,11 +17,16 @@ EXTRA_OECONF_PATHS = "\
 EXTRA_OECONF_append_linuxstdbase = " --enable-clocale=gnu"
 
 RUNTIMELIBITM = "libitm"
+RUNTIMELIBITM_arc = ""
 RUNTIMELIBITM_mipsarch = ""
 RUNTIMELIBITM_nios2 = ""
 RUNTIMELIBITM_microblaze = ""
+RUNTIMELIBITM_riscv32 = ""
+RUNTIMELIBITM_riscv64 = ""
+RUNTIMELIBSSP ?= ""
+RUNTIMELIBSSP_mingw32 ?= "libssp"
 
-RUNTIMETARGET = "libssp libstdc++-v3 libgomp libatomic ${RUNTIMELIBITM} \
+RUNTIMETARGET = "${RUNTIMELIBSSP} libstdc++-v3 libgomp libatomic ${RUNTIMELIBITM} \
     ${@bb.utils.contains_any('FORTRAN', [',fortran',',f77'], 'libquadmath', '', d)} \
 "
 RUNTIMETARGET_append_x86 = " libmpx"
@@ -32,9 +37,20 @@ RUNTIMETARGET_remove_libc-musl = "libmpx"
 # libmudflap
 # libgfortran needs separate recipe due to libquadmath dependency
 
+SLIB = "${TMPDIR}/work-shared/gcc-${PV}-${PR}/gcc-${PV}"
+SLIB_NEW = "/usr/src/debug/${PN}/${EXTENDPE}${PV}-${PR}"
+
+DEBUG_PREFIX_MAP_class-target = " \
+   -fdebug-prefix-map=${WORKDIR}/recipe-sysroot= \
+   -fdebug-prefix-map=${WORKDIR}/recipe-sysroot-native= \
+   -fdebug-prefix-map=${SLIB}=${SLIB_NEW} \
+   -fdebug-prefix-map=${SLIB}/include=${SLIB_NEW}/libstdc++-v3/../include \
+   -fdebug-prefix-map=${SLIB}/libiberty=${SLIB_NEW}/libstdc++-v3/../libiberty \
+   -fdebug-prefix-map=${B}=${SLIB_NEW} \
+   "
+
 do_configure () {
 	export CXX="${CXX} -nostdinc++ -nostdlib++"
-
 	for d in libgcc ${RUNTIMETARGET}; do
 		echo "Configuring $d"
 		rm -rf ${B}/${TARGET_SYS}/$d/
@@ -43,6 +59,9 @@ do_configure () {
 		chmod a+x ${S}/$d/configure
 		relpath=${@os.path.relpath("${S}/$d", "${B}/${TARGET_SYS}/$d")}
 		$relpath/configure ${CONFIGUREOPTS} ${EXTRA_OECONF}
+		if [ "$d" = "libgcc" ]; then
+			(cd ${B}/${TARGET_SYS}/libgcc; oe_runmake enable-execute-stack.c unwind.h md-unwind-support.h sfp-machine.h gthr-default.h)
+		fi
 	done
 }
 EXTRACONFFUNCS += "extract_stashed_builddir"
@@ -99,8 +118,8 @@ do_install_append_class-target () {
 
 	if [ "${TCLIBC}" != "glibc" ]; then
 		case "${TARGET_OS}" in
-			"linux-musl" | "linux-uclibc" | "linux-*spe") extra_target_os="linux";;
-			"linux-musleabi" | "linux-uclibceabi") extra_target_os="linux-gnueabi";;
+			"linux-musl" | "linux-*spe") extra_target_os="linux";;
+			"linux-musleabi") extra_target_os="linux-gnueabi";;
 			*) extra_target_os="linux";;
 		esac
 		ln -s ${TARGET_SYS} ${D}${includedir}/c++/${BINV}/${TARGET_ARCH}${TARGET_VENDOR}-$extra_target_os

@@ -33,8 +33,11 @@ Optional arguments:
   -c COMMITISH      test (checkout) this commit, <branch>:<commit> can be
                     specified to test specific commit of certain branch
   -C GIT_REPO       commit results into Git
+  -d DOWNLOAD_DIR   directory to store downloaded sources in
   -E EMAIL_ADDR     send email report
+  -g GLOBALRES_DIR  where to place the globalres file
   -P GIT_REMOTE     push results to a remote Git repository
+  -R DEST           rsync reports to a remote destination
   -w WORK_DIR       work dir for this script
                     (default: GIT_TOP_DIR/build-perf-test)
   -x                create xml report (instead of json)
@@ -50,20 +53,29 @@ get_os_release_var () {
 commitish=""
 oe_build_perf_test_extra_opts=()
 oe_git_archive_extra_opts=()
-while getopts "ha:c:C:E:P:w:x" opt; do
+while getopts "ha:c:C:d:E:g:P:R:w:x" opt; do
     case $opt in
         h)  usage
             exit 0
             ;;
-        a)  archive_dir=`realpath -s "$OPTARG"`
+        a)  mkdir -p "$OPTARG"
+            archive_dir=`realpath -s "$OPTARG"`
             ;;
         c)  commitish=$OPTARG
             ;;
-        C)  results_repo=`realpath -s "$OPTARG"`
+        C)  mkdir -p "$OPTARG"
+            results_repo=`realpath -s "$OPTARG"`
+            ;;
+        d)  download_dir=`realpath -s "$OPTARG"`
             ;;
         E)  email_to="$OPTARG"
             ;;
+        g)  mkdir -p "$OPTARG"
+            globalres_dir=`realpath -s "$OPTARG"`
+            ;;
         P)  oe_git_archive_extra_opts+=("--push" "$OPTARG")
+            ;;
+        R)  rsync_dst="$OPTARG"
             ;;
         w)  base_dir=`realpath -s "$OPTARG"`
             ;;
@@ -81,6 +93,17 @@ if [ $# -ne 0 ]; then
     echo "ERROR: No positional args are accepted."
     usage
     exit 1
+fi
+
+if [ -n "$email_to" ]; then
+    if ! [ -x "$(command -v phantomjs)" ]; then
+        echo "ERROR: Sending email needs phantomjs."
+        exit 1
+    fi
+    if ! [ -x "$(command -v optipng)" ]; then
+        echo "ERROR: Sending email needs optipng."
+        exit 1
+    fi
 fi
 
 # Open a file descriptor for flock and acquire lock
@@ -132,17 +155,29 @@ if [ -n "$commitish" ]; then
     git reset --hard $commit > /dev/null
 fi
 
+# Determine name of the current branch
+branch=`git symbolic-ref HEAD 2> /dev/null`
+# Strip refs/heads/
+branch=${branch:11}
+
 # Setup build environment
 if [ -z "$base_dir" ]; then
     base_dir="$git_topdir/build-perf-test"
 fi
 echo "Using working dir $base_dir"
 
+if [ -z "$download_dir" ]; then
+    download_dir="$base_dir/downloads"
+fi
+if [ -z "$globalres_dir" ]; then
+    globalres_dir="$base_dir"
+fi
+
 timestamp=`date "+%Y%m%d%H%M%S"`
 git_rev=$(git rev-parse --short HEAD)  || exit 1
 build_dir="$base_dir/build-$git_rev-$timestamp"
 results_dir="$base_dir/results-$git_rev-$timestamp"
-globalres_log="$base_dir/globalres.log"
+globalres_log="$globalres_dir/globalres.log"
 machine="qemux86"
 
 mkdir -p "$base_dir"
@@ -153,7 +188,7 @@ auto_conf="$build_dir/conf/auto.conf"
 echo "MACHINE = \"$machine\"" > "$auto_conf"
 echo 'BB_NUMBER_THREADS = "8"' >> "$auto_conf"
 echo 'PARALLEL_MAKE = "-j 8"' >> "$auto_conf"
-echo "DL_DIR = \"$base_dir/downloads\"" >> "$auto_conf"
+echo "DL_DIR = \"$download_dir\"" >> "$auto_conf"
 # Disabling network sanity check slightly reduces the variance of timing results
 echo 'CONNECTIVITY_CHECK_URIS = ""' >> "$auto_conf"
 # Possibility to define extra settings
@@ -187,13 +222,25 @@ if [ -n "$results_repo" ]; then
         "${oe_git_archive_extra_opts[@]}" \
         "$results_dir"
 
+    # Generate test reports
+    sanitized_branch=`echo $branch | tr / _`
+    report_txt=`hostname`_${sanitized_branch}_${machine}.txt
+    report_html=`hostname`_${sanitized_branch}_${machine}.html
+    echo -e "\nGenerating test report"
+    oe-build-perf-report -r "$results_repo" > $report_txt
+    oe-build-perf-report -r "$results_repo" --html > $report_html
+
     # Send email report
     if [ -n "$email_to" ]; then
-        echo -e "\nEmailing test report"
+        echo "Emailing test report"
         os_name=`get_os_release_var PRETTY_NAME`
-        oe-build-perf-report -r "$results_repo" > report.txt
-        oe-build-perf-report -r "$results_repo" --html > report.html
-        "$script_dir"/oe-build-perf-report-email.py --to "$email_to" --subject "Build Perf Test Report for $os_name" --text report.txt --html report.html "${OE_BUILD_PERF_REPORT_EMAIL_EXTRA_ARGS[@]}"
+        "$script_dir"/oe-build-perf-report-email.py --to "$email_to" --subject "Build Perf Test Report for $os_name" --text $report_txt --html $report_html "${OE_BUILD_PERF_REPORT_EMAIL_EXTRA_ARGS[@]}"
+    fi
+
+    # Upload report files, unless we're on detached head
+    if [ -n "$rsync_dst" -a -n "$branch" ]; then
+        echo "Uploading test report"
+        rsync $report_txt $report_html $rsync_dst
     fi
 fi
 

@@ -24,7 +24,7 @@ from collections import defaultdict
 from importlib.machinery import SourceFileLoader
 
 from wic import WicError
-from wic.utils.misc import get_bitbake_var
+from wic.misc import get_bitbake_var
 
 PLUGIN_TYPES = ["imager", "source"]
 
@@ -138,3 +138,12 @@ class SourcePlugin(metaclass=PluginMeta):
         """
         logger.debug("SourcePlugin: do_prepare_partition: part: %s", part)
 
+    @classmethod
+    def do_post_partition(cls, part, source_params, creator, cr_workdir,
+                             oe_builddir, bootimg_dir, kernel_dir, rootfs_dir,
+                             native_sysroot):
+        """
+        Called after the partition is created. It is useful to add post
+        operations e.g. security signing the partition.
+        """
+        logger.debug("SourcePlugin: do_post_partition: part: %s", part)

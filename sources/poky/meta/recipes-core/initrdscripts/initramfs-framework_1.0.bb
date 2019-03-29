@@ -2,18 +2,22 @@ SUMMARY = "Modular initramfs system"
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/COPYING.MIT;md5=3da9cfbcb788c80a0384361b4de20420"
 RDEPENDS_${PN} += "${VIRTUAL-RUNTIME_base-utils}"
+RRECOMMENDS_${PN} = "${VIRTUAL-RUNTIME_base-utils-syslog}"
 
-PR = "r2"
+PR = "r4"
 
 inherit allarch
 
 SRC_URI = "file://init \
+           file://exec \
+           file://nfsrootfs \
            file://rootfs \
            file://finish \
            file://mdev \
            file://udev \
            file://e2fs \
-           file://debug"
+           file://debug \
+          "
 
 S = "${WORKDIR}"
 
@@ -22,8 +26,12 @@ do_install() {
 
     # base
     install -m 0755 ${WORKDIR}/init ${D}/init
+    install -m 0755 ${WORKDIR}/nfsrootfs ${D}/init.d/85-nfsrootfs
     install -m 0755 ${WORKDIR}/rootfs ${D}/init.d/90-rootfs
     install -m 0755 ${WORKDIR}/finish ${D}/init.d/99-finish
+
+	# exec
+    install -m 0755 ${WORKDIR}/exec ${D}/init.d/89-exec
 
     # mdev
     install -m 0755 ${WORKDIR}/mdev ${D}/init.d/01-mdev
@@ -44,11 +52,14 @@ do_install() {
 }
 
 PACKAGES = "${PN}-base \
+            initramfs-module-exec \
             initramfs-module-mdev \
             initramfs-module-udev \
             initramfs-module-e2fs \
+            initramfs-module-nfsrootfs \
             initramfs-module-rootfs \
-            initramfs-module-debug"
+            initramfs-module-debug \
+           "
 
 FILES_${PN}-base = "/init /init.d/99-finish /dev"
 
@@ -59,6 +70,10 @@ FILES_${PN}-base = "/init /init.d/99-finish /dev"
 # something that runs earlier (for example, a 89-my-rootfs)
 # and mounts the rootfs. Then 90-rootfs will proceed immediately.
 RRECOMMENDS_${PN}-base += "initramfs-module-rootfs"
+
+SUMMARY_initramfs-module-exec = "initramfs support for easy execution of applications"
+RDEPENDS_initramfs-module-exec = "${PN}-base"
+FILES_initramfs-module-exec = "/init.d/89-exec"
 
 SUMMARY_initramfs-module-mdev = "initramfs support for mdev"
 RDEPENDS_initramfs-module-mdev = "${PN}-base busybox-mdev"
@@ -71,6 +86,10 @@ FILES_initramfs-module-udev = "/init.d/01-udev"
 SUMMARY_initramfs-module-e2fs = "initramfs support for ext4/ext3/ext2 filesystems"
 RDEPENDS_initramfs-module-e2fs = "${PN}-base"
 FILES_initramfs-module-e2fs = "/init.d/10-e2fs"
+
+SUMMARY_initramfs-module-nfsrootfs = "initramfs support for locating and mounting the root partition via nfs"
+RDEPENDS_initramfs-module-nfsrootfs = "${PN}-base"
+FILES_initramfs-module-nfsrootfs = "/init.d/85-nfsrootfs"
 
 SUMMARY_initramfs-module-rootfs = "initramfs support for locating and mounting the root partition"
 RDEPENDS_initramfs-module-rootfs = "${PN}-base"

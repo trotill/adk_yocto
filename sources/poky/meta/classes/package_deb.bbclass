@@ -39,50 +39,30 @@ def debian_arch_map(arch, tune):
     if arch == "arm":
         return arch + ["el", "hf"]["callconvention-hard" in tune_features]
     return arch
-#
-# install a bunch of packages using apt
-# the following shell variables needs to be set before calling this func:
-# INSTALL_ROOTFS_DEB - install root dir
-# INSTALL_BASEARCH_DEB - install base architecutre
-# INSTALL_ARCHS_DEB - list of available archs
-# INSTALL_PACKAGES_NORMAL_DEB - packages to be installed
-# INSTALL_PACKAGES_ATTEMPTONLY_DEB - packages attempted to be installed only
-# INSTALL_PACKAGES_LINGUAS_DEB - additional packages for uclibc
-# INSTALL_TASK_DEB - task name
 
 python do_package_deb () {
-    import re, copy
-    import textwrap
-    import subprocess
-    import collections
-    import codecs
-
-    oldcwd = os.getcwd()
-
-    workdir = d.getVar('WORKDIR')
-    if not workdir:
-        bb.error("WORKDIR not defined, unable to package")
-        return
-
-    outdir = d.getVar('PKGWRITEDIRDEB')
-    if not outdir:
-        bb.error("PKGWRITEDIRDEB not defined, unable to package")
-        return
-
     packages = d.getVar('PACKAGES')
     if not packages:
         bb.debug(1, "PACKAGES not defined, nothing to package")
         return
 
     tmpdir = d.getVar('TMPDIR')
-
     if os.access(os.path.join(tmpdir, "stamps", "DEB_PACKAGE_INDEX_CLEAN"),os.R_OK):
         os.unlink(os.path.join(tmpdir, "stamps", "DEB_PACKAGE_INDEX_CLEAN"))
 
-    if packages == []:
-        bb.debug(1, "No packages; nothing to do")
-        return
+    oe.utils.multiprocess_launch(deb_write_pkg, packages.split(), d, extraargs=(d,))
+}
+do_package_deb[vardeps] += "deb_write_pkg"
+do_package_deb[vardepsexclude] = "BB_NUMBER_THREADS"
 
+def deb_write_pkg(pkg, d):
+    import re, copy
+    import textwrap
+    import subprocess
+    import collections
+    import codecs
+
+    outdir = d.getVar('PKGWRITEDIRDEB')
     pkgdest = d.getVar('PKGDEST')
 
     def cleanupcontrol(root):
@@ -91,11 +71,11 @@ python do_package_deb () {
             if os.path.exists(p):
                 bb.utils.prunedir(p)
 
-    for pkg in packages.split():
-        localdata = bb.data.createCopy(d)
-        root = "%s/%s" % (pkgdest, pkg)
+    localdata = bb.data.createCopy(d)
+    root = "%s/%s" % (pkgdest, pkg)
 
-        lf = bb.utils.lockfile(root + ".lock")
+    lf = bb.utils.lockfile(root + ".lock")
+    try:
 
         localdata.setVar('ROOT', '')
         localdata.setVar('ROOT_%s' % pkg, root)
@@ -117,8 +97,7 @@ python do_package_deb () {
         g = glob('*')
         if not g and localdata.getVar('ALLOW_EMPTY', False) != "1":
             bb.note("Not creating empty archive for %s-%s-%s" % (pkg, localdata.getVar('PKGV'), localdata.getVar('PKGR')))
-            bb.utils.unlockfile(lf)
-            continue
+            return
 
         controldir = os.path.join(root, 'DEBIAN')
         bb.utils.mkdirhier(controldir)
@@ -194,18 +173,19 @@ python do_package_deb () {
         mapping_rename_hook(localdata)
 
         def debian_cmp_remap(var):
-            # dpkg does not allow for '(' or ')' in a dependency name
-            # replace these instances with '__' and '__'
+            # dpkg does not allow for '(', ')' or ':' in a dependency name
+            # Replace any instances of them with '__'
             #
             # In debian '>' and '<' do not mean what it appears they mean
             #   '<' = less or equal
             #   '>' = greater or equal
             # adjust these to the '<<' and '>>' equivalents
             #
-            for dep in var:
-                if '(' in dep:
-                    newdep = dep.replace('(', '__')
-                    newdep = newdep.replace(')', '__')
+            for dep in list(var.keys()):
+                if '(' in dep or '/' in dep:
+                    newdep = re.sub(r'[(:)/]', '__', dep)
+                    if newdep.startswith("__"):
+                        newdep = "A" + newdep
                     if newdep != dep:
                         var[newdep] = var[dep]
                         del var[dep]
@@ -289,17 +269,19 @@ python do_package_deb () {
             conffiles.close()
 
         os.chdir(basedir)
-        subprocess.check_output("PATH=\"%s\" dpkg-deb -b %s %s" % (localdata.getVar("PATH"), root, pkgoutdir), shell=True)
+        subprocess.check_output("PATH=\"%s\" dpkg-deb -b %s %s" % (localdata.getVar("PATH"), root, pkgoutdir),
+                                stderr=subprocess.STDOUT,
+                                shell=True)
 
+    finally:
         cleanupcontrol(root)
         bb.utils.unlockfile(lf)
-    os.chdir(oldcwd)
-}
+
+# Otherwise allarch packages may change depending on override configuration
+deb_write_pkg[vardepsexclude] = "OVERRIDES"
+
 # Indirect references to these vars
 do_package_write_deb[vardeps] += "PKGV PKGR PKGV DESCRIPTION SECTION PRIORITY MAINTAINER DPKG_ARCH PN HOMEPAGE"
-# Otherwise allarch packages may change depending on override configuration
-do_package_deb[vardepsexclude] = "OVERRIDES"
-
 
 SSTATETASKS += "do_package_write_deb"
 do_package_write_deb[sstate-inputdirs] = "${PKGWRITEDIRDEB}"

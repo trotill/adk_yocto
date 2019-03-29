@@ -4,7 +4,7 @@ rexec, rlogin, rlogind, rsh, rshd, syslog, syslogd, talk, \
 talkd, telnet, telnetd, tftp, tftpd, and uucpd."
 HOMEPAGE = "http://www.gnu.org/software/inetutils"
 SECTION = "net"
-DEPENDS = "ncurses netbase readline"
+DEPENDS = "ncurses netbase readline virtual/crypt"
 
 LICENSE = "GPLv3"
 
@@ -169,7 +169,10 @@ FILES_${PN}-hostname = "${base_bindir}/hostname.${BPN}"
 FILES_${PN}-ifconfig = "${base_sbindir}/ifconfig.${BPN}"
 FILES_${PN}-traceroute = "${bindir}/traceroute.${BPN}"
 FILES_${PN}-logger = "${bindir}/logger.${BPN}"
+
 FILES_${PN}-syslogd = "${base_sbindir}/syslogd.${BPN}"
+RCONFLICTS_${PN}-syslogd = "rsyslog busybox-syslog sysklogd syslog-ng"
+
 FILES_${PN}-ftp = "${bindir}/ftp.${BPN}"
 
 FILES_${PN}-tftp = "${bindir}/tftp.${BPN}"

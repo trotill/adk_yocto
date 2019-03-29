@@ -2,7 +2,12 @@ SUMMARY = "C#-like programming language for easing GObject programming"
 DESCRIPTION = "Vala is a C#-like language dedicated to ease GObject programming. \
 Vala compiles to plain C and has no runtime environment nor penalities whatsoever."
 SECTION = "devel"
-DEPENDS = "bison-native flex-native libxslt-native glib-2.0"
+DEPENDS = "bison-native flex-native glib-2.0"
+
+# Appending libxslt-native to dependencies has an effect
+# of rebuilding the manual, which is very slow. Let's do this
+# only when api-documentation distro feature is enabled.
+DEPENDS_append_class-target = " ${@bb.utils.contains('DISTRO_FEATURES', 'api-documentation', 'libxslt-native', '', d)}"
 
 # vala-native contains a native version of vapigen, which we use instead of the target one
 DEPENDS_append_class-target = " vala-native"
@@ -19,15 +24,20 @@ inherit autotools pkgconfig upstream-version-is-even
 FILES_${PN} += "${datadir}/${BPN}-${SHRT_VER}/vapi ${libdir}/${BPN}-${SHRT_VER}/"
 FILES_${PN}-doc += "${datadir}/devhelp"
 
+# .gir files from gobject-introspection are installed to ${libdir} when multilib is enabled
+GIRDIR_OPT = "${@'--girdir=${STAGING_LIBDIR}/gir-1.0' if d.getVar('MULTILIBS') else ''}"
+
 do_configure_prepend_class-target() {
         # Write out a vapigen wrapper that will be provided by pkg-config file installed in target sysroot
         # The wrapper will call a native vapigen
         cat > ${B}/vapigen-wrapper << EOF
 #!/bin/sh
-vapigen-${SHRT_VER} "\$@"
+vapigen-${SHRT_VER} ${GIRDIR_OPT} "\$@"
 EOF
         chmod +x ${B}/vapigen-wrapper
 }
+
+EXTRA_OECONF += " --disable-graphviz"
 
 # Vapigen wrapper needs to be available system-wide, because it will be used
 # to build vapi files from all other packages with vala support
@@ -48,3 +58,5 @@ vapigen_sysroot_preprocess() {
            -e "s|vapigen=.*|vapigen=${bindir}/vapigen-wrapper|" \
            ${SYSROOT_DESTDIR}${libdir}/pkgconfig/vapigen-${SHRT_VER}.pc
 }
+
+SSTATE_SCAN_FILES += "vapigen-wrapper"

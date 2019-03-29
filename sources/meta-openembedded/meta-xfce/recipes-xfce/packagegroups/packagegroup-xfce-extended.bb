@@ -1,11 +1,13 @@
 SUMMARY = "All packages for full XFCE installation"
 SECTION = "x11/wm"
 LICENSE = "MIT"
-LIC_FILES_CHKSUM = "file://${COREBASE}/LICENSE;md5=4d92cd373abda3937c2bc47fbc49d690"
+LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
 
 PR = "r10"
 
-inherit packagegroup
+inherit packagegroup distro_features_check
+
+REQUIRED_DISTRO_FEATURES = "x11"
 
 # mandatory
 RDEPENDS_${PN} = " \
@@ -54,6 +56,7 @@ RRECOMMENDS_${PN} = " \
     xfce4-verve-plugin \
     \
     xfce-polkit \
+    ${@bb.utils.contains("DISTRO_FEATURES", "bluetooth", "blueman", "", d)} \
     \
     thunar-media-tags-plugin \
     thunar-archive-plugin \
@@ -65,4 +68,7 @@ RRECOMMENDS_${PN} = " \
     ristretto \
     xfce4-taskmanager \
     gigolo \
+    mousepad \
+    catfish \
+    xfce4-panel-profiles \
 "

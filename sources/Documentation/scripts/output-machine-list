@@ -1,0 +1,76 @@
+#!/bin/sh
+
+usage() {
+    local exit_code
+    local output
+    [ -n $1 ] && exit_code=$1
+    if [ -n "$exit_code" ] && [ "$exit_code" != "0" ]; then
+        output=2
+    else
+        output=1
+    fi
+    cat <<EOF >&$output
+Usage: `basename $0` <yocto directory> [<command>]
+
+Commands:
+
+tabularize
+   Print tabular data for machines
+
+list
+   List machine names
+
+If <command> is omitted, list is used by default.
+EOF
+    [ -n "$exit_code" ] && exit $exit_code
+}
+
+
+[ -z "$1" ] && usage 1
+
+if [ "$1" = "-h" ] || [ "$1" = "-help" ] || [ "$1" = "--help" ]; then
+    usage 0
+fi
+
+REPO=$1
+COMMAND=$2
+
+TMP=`mktemp`
+MACHINE_LAYERS="meta-freescale meta-freescale-3rdparty"
+
+list_machine_files() {
+    for l in $MACHINE_LAYERS; do
+        cd $REPO; repo forall $l -c 'find -wholename "*/conf/machine/*.conf" | sed "s,./\(.*\),$REPO_PATH/\1,g"'
+    done
+}
+
+list_machines() {
+    for m in `list_machine_files`; do
+        basename $m | sed 's,\.conf$,,g'
+    done | sort
+}
+
+tabularize_machines() {
+    echo "Machine,Name,SoC,Layer" >> $TMP
+
+    for l in $MACHINE_LAYERS; do
+        MACHINES=`cd $REPO; repo forall $l -c 'find -wholename "*/conf/machine/*.conf" | sed "s,./\(.*\),$REPO_PATH/\1,g"'`
+        for m in $MACHINES; do
+            machine=`basename $m | sed 's,\.conf$,,g'`
+            name=`sed -n 's,#@NAME:\s*\(.*\),\1,p' $REPO/$m`
+            soc=`sed -n 's,#@SOC:\s*\(.*\),\1,p' $REPO/$m`
+            l=`basename $l`
+            printf "%s,%s,%s,%s\n" "$machine" "$name" "$soc" "$l" >> $TMP
+        done
+    done
+
+    python format_machine_list.py $TMP
+
+    rm $TMP
+}
+
+case "$COMMAND" in
+    "tabularize") tabularize_machines ;;
+    "list" | "") list_machines ;;
+    *) echo "Invalid command: $COMMAND" >&2
+esac

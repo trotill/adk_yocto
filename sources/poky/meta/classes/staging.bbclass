@@ -68,101 +68,19 @@ sysroot_stage_all() {
 }
 
 python sysroot_strip () {
-    import stat, errno
+    inhibit_sysroot = d.getVar('INHIBIT_SYSROOT_STRIP')
+    if inhibit_sysroot and oe.types.boolean(inhibit_sysroot):
+        return
 
-    dvar = d.getVar('SYSROOT_DESTDIR')
+    dstdir = d.getVar('SYSROOT_DESTDIR')
     pn = d.getVar('PN')
+    libdir = os.path.abspath(dstdir + os.sep + d.getVar("libdir"))
+    base_libdir = os.path.abspath(dstdir + os.sep + d.getVar("base_libdir"))
+    qa_already_stripped = 'already-stripped' in (d.getVar('INSANE_SKIP_' + pn) or "").split()
+    strip_cmd = d.getVar("STRIP")
 
-    os.chdir(dvar)
-
-    # Return type (bits):
-    # 0 - not elf
-    # 1 - ELF
-    # 2 - stripped
-    # 4 - executable
-    # 8 - shared library
-    # 16 - kernel module
-    def isELF(path):
-        type = 0
-        ret, result = oe.utils.getstatusoutput("file \"%s\"" % path.replace("\"", "\\\""))
-
-        if ret:
-            bb.error("split_and_strip_files: 'file %s' failed" % path)
-            return type
-
-        # Not stripped
-        if "ELF" in result:
-            type |= 1
-            if "not stripped" not in result:
-                type |= 2
-            if "executable" in result:
-                type |= 4
-            if "shared" in result:
-                type |= 8
-        return type
-
-
-    elffiles = {}
-    inodes = {}
-    libdir = os.path.abspath(dvar + os.sep + d.getVar("libdir"))
-    baselibdir = os.path.abspath(dvar + os.sep + d.getVar("base_libdir"))
-    if (d.getVar('INHIBIT_SYSROOT_STRIP') != '1'):
-        #
-        # First lets figure out all of the files we may have to process
-        #
-        for root, dirs, files in os.walk(dvar):
-            for f in files:
-                file = os.path.join(root, f)
-
-                try:
-                    ltarget = oe.path.realpath(file, dvar, False)
-                    s = os.lstat(ltarget)
-                except OSError as e:
-                    (err, strerror) = e.args
-                    if err != errno.ENOENT:
-                        raise
-                    # Skip broken symlinks
-                    continue
-                if not s:
-                    continue
-                # Check its an excutable
-                if (s[stat.ST_MODE] & stat.S_IXUSR) or (s[stat.ST_MODE] & stat.S_IXGRP) or (s[stat.ST_MODE] & stat.S_IXOTH) \
-                        or ((file.startswith(libdir) or file.startswith(baselibdir)) and ".so" in f):
-                    # If it's a symlink, and points to an ELF file, we capture the readlink target
-                    if os.path.islink(file):
-                        continue
-
-                    # It's a file (or hardlink), not a link
-                    # ...but is it ELF, and is it already stripped?
-                    elf_file = isELF(file)
-                    if elf_file & 1:
-                        if elf_file & 2:
-                            if 'already-stripped' in (d.getVar('INSANE_SKIP_' + pn) or "").split():
-                                bb.note("Skipping file %s from %s for already-stripped QA test" % (file[len(dvar):], pn))
-                            else:
-                                bb.warn("File '%s' from %s was already stripped, this will prevent future debugging!" % (file[len(dvar):], pn))
-                            continue
-
-                        if s.st_ino in inodes:
-                            os.unlink(file)
-                            os.link(inodes[s.st_ino], file)
-                        else:
-                            inodes[s.st_ino] = file
-                            # break hardlink
-                            bb.utils.copyfile(file, file)
-                            elffiles[file] = elf_file
-
-        #
-        # Now strip them (in parallel)
-        #
-        strip = d.getVar("STRIP")
-        sfiles = []
-        for file in elffiles:
-            elf_file = int(elffiles[file])
-            #bb.note("Strip %s" % file)
-            sfiles.append((file, elf_file, strip))
-
-        oe.utils.multiprocess_exec(sfiles, oe.package.runstrip)
+    oe.package.strip_execs(pn, dstdir, strip_cmd, libdir, base_libdir, d,
+                           qa_already_stripped=qa_already_stripped)
 }
 
 do_populate_sysroot[dirs] = "${SYSROOT_DESTDIR}"
@@ -249,16 +167,17 @@ def staging_processfixme(fixme, target, recipesysroot, recipesysrootnative, d):
     if not fixme:
         return
     cmd = "sed -e 's:^[^/]*/:%s/:g' %s | xargs sed -i -e 's:FIXMESTAGINGDIRTARGET:%s:g; s:FIXMESTAGINGDIRHOST:%s:g'" % (target, " ".join(fixme), recipesysroot, recipesysrootnative)
-    for fixmevar in ['COMPONENTS_DIR', 'HOSTTOOLS_DIR', 'PKGDATA_DIR']:
+    for fixmevar in ['COMPONENTS_DIR', 'HOSTTOOLS_DIR', 'PKGDATA_DIR', 'PSEUDO_LOCALSTATEDIR', 'LOGFIFO']:
         fixme_path = d.getVar(fixmevar)
         cmd += " -e 's:FIXME_%s:%s:g'" % (fixmevar, fixme_path)
     bb.debug(2, cmd)
-    subprocess.check_output(cmd, shell=True)
+    subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
 
 
 def staging_populate_sysroot_dir(targetsysroot, nativesysroot, native, d):
     import glob
     import subprocess
+    import errno
 
     fixme = []
     postinsts = []
@@ -309,7 +228,7 @@ def staging_populate_sysroot_dir(targetsysroot, nativesysroot, native, d):
 
     staging_processfixme(fixme, targetdir, targetsysroot, nativesysroot, d)
     for p in postinsts:
-        subprocess.check_output(p, shell=True)
+        subprocess.check_output(p, shell=True, stderr=subprocess.STDOUT)
 
 #
 # Manifests here are complicated. The main sysroot area has the unpacked sstate
@@ -337,7 +256,7 @@ python extend_recipe_sysroot() {
     workdir = d.getVar("WORKDIR")
     #bb.warn(str(taskdepdata))
     pn = d.getVar("PN")
-
+    mc = d.getVar("BB_CURRENT_MC")
     stagingdir = d.getVar("STAGING_DIR")
     sharedmanifests = d.getVar("COMPONENTS_DIR") + "/manifests"
     recipesysroot = d.getVar("RECIPE_SYSROOT")
@@ -375,12 +294,14 @@ python extend_recipe_sysroot() {
     start = set([start])
 
     sstatetasks = d.getVar("SSTATETASKS").split()
+    # Add recipe specific tasks referenced by setscene_depvalid()
+    sstatetasks.append("do_stash_locale")
 
     def print_dep_tree(deptree):
         data = ""
         for dep in deptree:
             deps = "    " + "\n    ".join(deptree[dep][3]) + "\n"
-            data = "%s:\n  %s\n  %s\n%s  %s\n  %s\n" % (deptree[dep][0], deptree[dep][1], deptree[dep][2], deps, deptree[dep][4], deptree[dep][5])
+            data = data + "%s:\n  %s\n  %s\n%s  %s\n  %s\n" % (deptree[dep][0], deptree[dep][1], deptree[dep][2], deps, deptree[dep][4], deptree[dep][5])
         return data
 
     #bb.note("Full dep tree is:\n%s" % print_dep_tree(taskdepdata))
@@ -454,7 +375,8 @@ python extend_recipe_sysroot() {
                     msgbuf.append("Following dependency on %s" % setscenedeps[datadep][0])
         next = new
 
-    bb.note("\n".join(msgbuf))
+    # This logging is too verbose for day to day use sadly
+    #bb.debug(2, "\n".join(msgbuf))
 
     depdir = recipesysrootnative + "/installeddeps"
     bb.utils.mkdirhier(depdir)
@@ -463,12 +385,12 @@ python extend_recipe_sysroot() {
     lock = bb.utils.lockfile(recipesysroot + "/sysroot.lock")
 
     fixme = {}
-    fixme[''] = []
-    fixme['native'] = []
     seendirs = set()
     postinsts = []
     multilibs = {}
     manifests = {}
+    # All files that we're going to be installing, to find conflicts.
+    fileset = {}
 
     for f in os.listdir(depdir):
         if not f.endswith(".complete"):
@@ -521,7 +443,15 @@ python extend_recipe_sysroot() {
             os.unlink(fl)
             os.unlink(fl + ".complete")
 
+    msg_exists = []
+    msg_adding = []
+
     for dep in configuredeps:
+        if mc != 'default':
+            # We should not care about other multiconfigs
+            depmc = dep.split(':')[1]
+            if depmc != mc:
+                continue
         c = setscenedeps[dep][0]
         if c not in installed:
             continue
@@ -531,7 +461,7 @@ python extend_recipe_sysroot() {
         if os.path.exists(depdir + "/" + c):
             lnk = os.readlink(depdir + "/" + c)
             if lnk == c + "." + taskhash and os.path.exists(depdir + "/" + c + ".complete"):
-                bb.note("%s exists in sysroot, skipping" % c)
+                msg_exists.append(c)
                 continue
             else:
                 bb.note("%s exists in sysroot, but is stale (%s vs. %s), removing." % (c, lnk, c + "." + taskhash))
@@ -542,49 +472,33 @@ python extend_recipe_sysroot() {
         elif os.path.lexists(depdir + "/" + c):
             os.unlink(depdir + "/" + c)
 
+        msg_adding.append(c)
+
         os.symlink(c + "." + taskhash, depdir + "/" + c)
 
-        d2 = d
-        destsysroot = recipesysroot
-        variant = ''
-        if setscenedeps[dep][2].startswith("virtual:multilib"):
-            variant = setscenedeps[dep][2].split(":")[2]
-            if variant != current_variant:
-                if variant not in multilibs:
-                    multilibs[variant] = get_multilib_datastore(variant, d)
-                d2 = multilibs[variant]
-                destsysroot = d2.getVar("RECIPE_SYSROOT")
+        manifest, d2 = oe.sstatesig.find_sstate_manifest(c, setscenedeps[dep][2], "populate_sysroot", d, multilibs)
+        if d2 is not d:
+            # If we don't do this, the recipe sysroot will be placed in the wrong WORKDIR for multilibs
+            # We need a consistent WORKDIR for the image
+            d2.setVar("WORKDIR", d.getVar("WORKDIR"))
+        destsysroot = d2.getVar("RECIPE_SYSROOT")
+        # We put allarch recipes into the default sysroot
+        if manifest and "allarch" in manifest:
+            destsysroot = d.getVar("RECIPE_SYSROOT")
 
         native = False
-        if c.endswith("-native"):
-            manifest = d2.expand("${SSTATE_MANIFESTS}/manifest-${BUILD_ARCH}-%s.populate_sysroot" % c)
+        if c.endswith("-native") or "-cross-" in c or "-crosssdk" in c:
             native = True
-        elif c.startswith("nativesdk-"):
-            manifest = d2.expand("${SSTATE_MANIFESTS}/manifest-${SDK_ARCH}_${SDK_OS}-%s.populate_sysroot" % c)
-        elif "-cross-" in c:
-            manifest = d2.expand("${SSTATE_MANIFESTS}/manifest-${BUILD_ARCH}_${TARGET_ARCH}-%s.populate_sysroot" % c)
-            native = True
-        elif "-crosssdk" in c:
-            manifest = d2.expand("${SSTATE_MANIFESTS}/manifest-${BUILD_ARCH}_${SDK_ARCH}_${SDK_OS}-%s.populate_sysroot" % c)
-            native = True
-        else:
-            pkgarchs = ['${MACHINE_ARCH}']
-            pkgarchs = pkgarchs + list(reversed(d2.getVar("PACKAGE_EXTRA_ARCHS").split()))
-            pkgarchs.append('allarch')
-            for pkgarch in pkgarchs:
-                manifest = d2.expand("${SSTATE_MANIFESTS}/manifest-%s-%s.populate_sysroot" % (pkgarch, c))
-                if os.path.exists(manifest):
-                    break
-        if not os.path.exists(manifest):
-            bb.warn("Manifest %s not found?" % manifest)
-        else:
+
+        if manifest:
             newmanifest = collections.OrderedDict()
+            targetdir = destsysroot
             if native:
-                fm = fixme['native']
                 targetdir = recipesysrootnative
-            else:
-                fm = fixme['']
-                targetdir = destsysroot
+            if targetdir not in fixme:
+                fixme[targetdir] = []
+            fm = fixme[targetdir]
+
             with open(manifest, "r") as f:
                 manifests[dep] = manifest
                 for l in f:
@@ -595,8 +509,19 @@ python extend_recipe_sysroot() {
                     if l.endswith("/fixmepath.cmd"):
                         continue
                     dest = l.replace(stagingdir, "")
-                    dest = targetdir + "/" + "/".join(dest.split("/")[3:])
-                    newmanifest[l] = dest
+                    dest = "/" + "/".join(dest.split("/")[3:])
+                    newmanifest[l] = targetdir + dest
+
+                    # Check if files have already been installed by another
+                    # recipe and abort if they have, explaining what recipes are
+                    # conflicting.
+                    hashname = targetdir + dest
+                    if not hashname.endswith("/"):
+                        if hashname in fileset:
+                            bb.fatal("The file %s is installed by both %s and %s, aborting" % (dest, c, fileset[hashname]))
+                        else:
+                            fileset[hashname] = c
+
             # Having multiple identical manifests in each sysroot eats diskspace so
             # create a shared pool of them and hardlink if we can.
             # We create the manifest in advance so that if something fails during installation,
@@ -627,16 +552,14 @@ python extend_recipe_sysroot() {
                         continue
                     staging_copyfile(l, targetdir, dest, postinsts, seendirs)
 
+    bb.note("Installed into sysroot: %s" % str(msg_adding))
+    bb.note("Skipping as already exists in sysroot: %s" % str(msg_exists))
+
     for f in fixme:
-        if f == '':
-            staging_processfixme(fixme[f], recipesysroot, recipesysroot, recipesysrootnative, d)
-        elif f == 'native':
-            staging_processfixme(fixme[f], recipesysrootnative, recipesysroot, recipesysrootnative, d)
-        else:
-            staging_processfixme(fixme[f], multilibs[f].getVar("RECIPE_SYSROOT"), recipesysroot, recipesysrootnative, d)
+        staging_processfixme(fixme[f], f, recipesysroot, recipesysrootnative, d)
 
     for p in postinsts:
-        subprocess.check_output(p, shell=True)
+        subprocess.check_output(p, shell=True, stderr=subprocess.STDOUT)
 
     for dep in manifests:
         c = setscenedeps[dep][0]
@@ -658,6 +581,9 @@ addtask do_prepare_recipe_sysroot before do_configure after do_fetch
 # Clean out the recipe specific sysroots before do_fetch
 # (use a prefunc so we can order before extend_recipe_sysroot if it gets added)
 python clean_recipe_sysroot() {
+    # We remove these stamps since we're removing any content they'd have added with
+    # cleandirs. This removes the sigdata too, likely not a big deal,
+    oe.path.remove(d.getVar("STAMP") + "*addto_recipe_sysroot*")
     return
 }
 clean_recipe_sysroot[cleandirs] += "${RECIPE_SYSROOT} ${RECIPE_SYSROOT_NATIVE}"
@@ -672,4 +598,3 @@ python staging_taskhandler() {
 }
 staging_taskhandler[eventmask] = "bb.event.RecipeTaskPreProcess"
 addhandler staging_taskhandler
-

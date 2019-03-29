@@ -1,0 +1,63 @@
+Freescale Community BSP Documentation
+-------------------------------------
+
+The documentation is written using the Sphinx documentation system. To
+install it in Debian/Ubuntu, please do:
+
+  #: apt-get install libfreetype6-dev libjpeg8-dev python3-dev python3-pip \
+     python3-sphinx texlive-fonts-recommended texlive-latex-extra zlib1g-dev \
+     fonts-liberation
+  #: pip3 install reportlab sphinxcontrib-blockdiag
+
+Once this has been completed, you can run 'make' in each of the Documentation
+folders to review the available targets for building.
+
+How to generate the binary
+--------------------------
+
+Follow the instructions below inside each sub-project in order to generate the
+desired binary.
+
+In order to generate the HTML all-in-one:
+
+ $ make singlehtml
+
+In order to generate the PDF file:
+
+ $ make latexpdf
+
+In order to generate the printable PDF file:
+
+ $ make latexpdf -t <option>
+
+Where option can be:
+
+ * a4twoside = A4 page size and two side print;
+ * lettertwoside = letter page size and two side print;
+ * the default value is letter page size and one side print;
+
+Contributing
+------------
+
+To contribute to this repository you should submit the patches for
+review to the mailing list: meta-freescale@yoctoproject.org.
+
+Please refer to:
+http://openembedded.org/wiki/Commit_Patch_Message_Guidelines
+for useful guidelines to be followed when submitting patches.
+
+Mailing list:
+
+    https://lists.yoctoproject.org/listinfo/meta-freescale
+
+Source code:
+
+    https://github.com/Freescale/Documentation
+
+When creating patches, please use something like:
+
+    git format-patch -s --subject-prefix='Documentation][PATCH' origin
+
+When sending patches, please use something like:
+
+    git send-email --to meta-freescale@yoctoproject.org <generated patch>

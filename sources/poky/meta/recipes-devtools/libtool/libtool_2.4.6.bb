@@ -1,5 +1,7 @@
 require libtool-${PV}.inc
 
+SRC_URI += "file://multilib.patch"
+
 RDEPENDS_${PN} += "bash"
 
 #
@@ -15,6 +17,7 @@ ACLOCALEXTRAPATH_class-target = ""
 
 do_install_append () {
         sed -e 's@--sysroot=${STAGING_DIR_HOST}@@g' \
+            -e "s@${DEBUG_PREFIX_MAP}@@g" \
             -e 's@${STAGING_DIR_HOST}@@g' \
             -e 's@${STAGING_DIR_NATIVE}@@g' \
             -e 's@^\(sys_lib_search_path_spec="\).*@\1${libdir} ${base_libdir}"@' \
@@ -22,5 +25,10 @@ do_install_append () {
             -e 's@^\(compiler_lib_search_path="\).*@\1${libdir} ${base_libdir}"@' \
             -e 's@^\(predep_objects="\).*@\1"@' \
             -e 's@^\(postdep_objects="\).*@\1"@' \
+            -e "s@${HOSTTOOLS_DIR}/@@g" \
             -i ${D}${bindir}/libtool
 }
+
+inherit multilib_script
+
+MULTILIB_SCRIPTS = "${PN}:${bindir}/libtool"

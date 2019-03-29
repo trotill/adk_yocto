@@ -2,7 +2,7 @@ SUMMARY = "Configuration files for kexecboot"
 DESCRIPTION = "Default icon and boot.cfg for kexecboot linux-as-bootloader."
 SECTION = "base"
 LICENSE = "MIT"
-LIC_FILES_CHKSUM = "file://${COREBASE}/LICENSE;md5=4d92cd373abda3937c2bc47fbc49d690"
+LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
 
 SRC_URI = "file://icon.xpm"
 
@@ -19,8 +19,14 @@ LABEL=${KEXECBOOT_LABEL}
 # Specify full kernel path on target.
 KERNEL=/boot/${KERNEL_IMAGETYPE}
 #
+# Specify which device tree blob to use
+# DTB=/boot/my-own-dtb
+#
 # Append this tags to the kernel cmdline.
 APPEND=${CMDLINE} ${CMDLINE_DEBUG}
+#
+# Overwrite kernel command line instead of appending to it
+# CMDLINE=console=/dev/tty0 root=/dev/sdb1
 #
 # Specify optional initrd/initramfs.
 # INITRD=/boot/initramfs.cpio.gz

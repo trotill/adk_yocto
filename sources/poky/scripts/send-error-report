@@ -62,7 +62,7 @@ def edit_content(json_file_path):
 
 def prepare_data(args):
     # attempt to get the max_log_size from the server's settings
-    max_log_size = getPayloadLimit("http://"+args.server+"/ClientPost/JSON")
+    max_log_size = getPayloadLimit("https://"+args.server+"/ClientPost/JSON")
 
     if not os.path.isfile(args.error_file):
         log.error("No data file found.")
@@ -88,7 +88,7 @@ def prepare_data(args):
         log.error("Name needs to be provided either via "+userfile+" or as an argument (-n).")
         sys.exit(1)
 
-    while len(args.name) <= 0 and len(args.name) < 50:
+    while len(args.name) <= 0 or len(args.name) > 50:
         print("\nName needs to be given and must not more than 50 characters.")
         args.name, args.email = ask_for_contactdetails()
 
@@ -132,18 +132,18 @@ def send_data(data, args):
     headers={'Content-type': 'application/json', 'User-Agent': "send-error-report/"+version}
 
     if args.json:
-        url = "http://"+args.server+"/ClientPost/JSON/"
+        url = "https://"+args.server+"/ClientPost/JSON/"
     else:
-        url = "http://"+args.server+"/ClientPost/"
+        url = "https://"+args.server+"/ClientPost/"
 
     req = urllib.request.Request(url, data=data, headers=headers)
     try:
         response = urllib.request.urlopen(req)
     except urllib.error.HTTPError as e:
-        logging.error(e.reason)
+        logging.error(str(e))
         sys.exit(1)
 
-    print(response.read())
+    print(response.read().decode('utf-8'))
 
 
 if __name__ == '__main__':

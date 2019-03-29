@@ -1,14 +1,19 @@
 SUMMARY = "Serial terminal support for systemd"
+HOMEPAGE = "https://www.freedesktop.org/wiki/Software/systemd/"
 LICENSE = "GPLv2+"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/GPL-2.0;md5=801f80980d171dd6425610833a22dbe6"
 
 PR = "r5"
 
-SERIAL_CONSOLE ?= "115200 ttyS0"
+SERIAL_CONSOLES ?= "115200;ttyS0"
 
 SRC_URI = "file://serial-getty@.service"
 
 S = "${WORKDIR}"
+
+# As this package is tied to systemd, only build it when we're also building systemd.
+inherit distro_features_check
+REQUIRED_DISTRO_FEATURES = "systemd"
 
 do_install() {
 	if [ ! -z "${SERIAL_CONSOLES}" ] ; then
@@ -38,14 +43,8 @@ do_install() {
 	fi
 }
 
-RDEPENDS_${PN} = "systemd"
-
 # This is a machine specific file
 FILES_${PN} = "${systemd_unitdir}/system/*.service ${sysconfdir}"
 PACKAGE_ARCH = "${MACHINE_ARCH}"
 
-# As this package is tied to systemd, only build it when we're also building systemd.
-python () {
-    if not bb.utils.contains ('DISTRO_FEATURES', 'systemd', True, False, d):
-        raise bb.parse.SkipPackage("'systemd' not in DISTRO_FEATURES")
-}
+ALLOW_EMPTY_${PN} = "1"

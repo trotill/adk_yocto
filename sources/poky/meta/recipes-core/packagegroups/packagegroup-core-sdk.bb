@@ -27,13 +27,11 @@ RDEPENDS_packagegroup-core-sdk = "\
     tcl"
 
 SANITIZERS = "libasan-dev libubsan-dev"
-SANITIZERS_aarch64 = ""
+SANITIZERS_microblaze = ""
 SANITIZERS_mipsarch = ""
 SANITIZERS_nios2 = ""
-SANITIZERS_powerpc64 = ""
-SANITIZERS_sparc = ""
+SANITIZERS_riscv64 = ""
 SANITIZERS_libc-musl = ""
-SANITIZERS_libc-uclibc = ""
 
 RRECOMMENDS_packagegroup-core-sdk = "\
     libgomp \

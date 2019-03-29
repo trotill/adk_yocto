@@ -37,9 +37,7 @@ UPSTREAM_CHECK_URI = "${DEBIAN_MIRROR}/main/n/net-tools/"
 
 inherit gettext
 
-do_patch[depends] = "quilt-native:do_populate_sysroot"
-
-LDFLAGS_append_libc-uclibc = " -lintl "
+do_patch[depends] += "quilt-native:do_populate_sysroot"
 
 # The Makefile is lame, no parallel build
 PARALLEL_MAKE = ""
@@ -50,7 +48,16 @@ PARALLEL_MAKE = ""
 # up all previously applied patches in the start
 nettools_do_patch() {
 	cd ${S}
-	quilt pop -a || true
+	# it's important that we only pop the existing patches when they've
+	# been applied, otherwise quilt will climb the directory tree
+	# and reverse out some completely different set of patches
+	if [ -d ${S}/patches ]; then
+		# whilst this is the default directory, doing it like this
+		# defeats the directory climbing that quilt will otherwise
+		# do; note the directory must exist to defeat this, hence
+		# the test inside which we operate
+		QUILT_PATCHES=${S}/patches quilt pop -a
+	fi
 	if [ -d ${S}/.pc-nettools ]; then
 		rm -rf ${S}/.pc
 		mv ${S}/.pc-nettools ${S}/.pc
@@ -83,20 +90,12 @@ do_configure() {
 
 do_compile() {
 	# net-tools use COPTS/LOPTS to allow adding custom options
-	export COPTS="$CFLAGS"
-	export LOPTS="$LDFLAGS"
-	unset CFLAGS
-	unset LDFLAGS
-
-	oe_runmake
+	oe_runmake COPTS="$CFLAGS" LOPTS="$LDFLAGS"
 }
 
 do_install() {
-	export COPTS="$CFLAGS"
-	export LOPTS="$LDFLAGS"
-	unset CFLAGS
-	unset LDFLAGS
-	oe_runmake 'BASEDIR=${D}' install
+	# We don't need COPTS or LOPTS, but let's be consistent.
+	oe_runmake COPTS="$CFLAGS" LOPTS="$LDFLAGS" 'BASEDIR=${D}' install
 
 	if [ "${base_bindir}" != "/bin" ]; then
 		mkdir -p ${D}/${base_bindir}
@@ -122,10 +121,10 @@ ALTERNATIVE_LINK_NAME[dnsdomainname.1] = "${mandir}/man1/dnsdomainname.1"
 ALTERNATIVE_PRIORITY[hostname.1] = "10"
 
 python __anonymous() {
-	for prog in d.getVar('base_sbindir_progs').split():
-		d.setVarFlag('ALTERNATIVE_LINK_NAME', prog, '%s/%s' % (d.getVar('base_sbindir'), prog))
-	for prog in d.getVar('base_bindir_progs').split():
-		d.setVarFlag('ALTERNATIVE_LINK_NAME', prog, '%s/%s' % (d.getVar('base_bindir'), prog))
+    for prog in d.getVar('base_sbindir_progs').split():
+        d.setVarFlag('ALTERNATIVE_LINK_NAME', prog, '%s/%s' % (d.getVar('base_sbindir'), prog))
+    for prog in d.getVar('base_bindir_progs').split():
+        d.setVarFlag('ALTERNATIVE_LINK_NAME', prog, '%s/%s' % (d.getVar('base_bindir'), prog))
 }
 ALTERNATIVE_PRIORITY = "100"
 

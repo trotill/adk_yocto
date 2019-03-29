@@ -141,6 +141,9 @@ def print_ui_queue():
     logger = logging.getLogger("BitBake")
     if not _uiready:
         from bb.msg import BBLogFormatter
+        # Flush any existing buffered content
+        sys.stdout.flush()
+        sys.stderr.flush()
         stdout = logging.StreamHandler(sys.stdout)
         stderr = logging.StreamHandler(sys.stderr)
         formatter = BBLogFormatter("%(levelname)s: %(message)s")
@@ -149,23 +152,34 @@ def print_ui_queue():
 
         # First check to see if we have any proper messages
         msgprint = False
+        msgerrs = False
+
+        # Should we print to stderr?
+        for event in ui_queue[:]:
+            if isinstance(event, logging.LogRecord) and event.levelno >= logging.WARNING:
+                msgerrs = True
+                break
+
+        if msgerrs:
+            logger.addHandler(stderr)
+        else:
+            logger.addHandler(stdout)
+
         for event in ui_queue[:]:
             if isinstance(event, logging.LogRecord):
                 if event.levelno > logging.DEBUG:
-                    if event.levelno >= logging.WARNING:
-                        logger.addHandler(stderr)
-                    else:
-                        logger.addHandler(stdout)
                     logger.handle(event)
                     msgprint = True
-        if msgprint:
-            return
 
         # Nope, so just print all of the messages we have (including debug messages)
-        logger.addHandler(stdout)
-        for event in ui_queue[:]:
-            if isinstance(event, logging.LogRecord):
-                logger.handle(event)
+        if not msgprint:
+            for event in ui_queue[:]:
+                if isinstance(event, logging.LogRecord):
+                    logger.handle(event)
+        if msgerrs:
+            logger.removeHandler(stderr)
+        else:
+            logger.removeHandler(stdout)
 
 def fire_ui_handlers(event, d):
     global _thread_lock
@@ -212,6 +226,12 @@ def fire(event, d):
     if worker_fire:
         worker_fire(event, d)
     else:
+        # If messages have been queued up, clear the queue
+        global _uiready, ui_queue
+        if _uiready and ui_queue:
+            for queue_event in ui_queue:
+                fire_ui_handlers(queue_event, d)
+            ui_queue = []
         fire_ui_handlers(event, d)
 
 def fire_from_worker(event, d):
@@ -264,6 +284,11 @@ def register(name, handler, mask=None, filename=None, lineno=None):
 def remove(name, handler):
     """Remove an Event handler"""
     _handlers.pop(name)
+    if name in _catchall_handlers:
+        _catchall_handlers.pop(name)
+    for event in _event_handler_map.keys():
+        if name in _event_handler_map[event]:
+            _event_handler_map[event].pop(name)
 
 def get_handlers():
     return _handlers
@@ -277,19 +302,27 @@ def set_eventfilter(func):
     _eventfilter = func
 
 def register_UIHhandler(handler, mainui=False):
-    if mainui:
-        global _uiready
-        _uiready = True
     bb.event._ui_handler_seq = bb.event._ui_handler_seq + 1
     _ui_handlers[_ui_handler_seq] = handler
     level, debug_domains = bb.msg.constructLogOptions()
     _ui_logfilters[_ui_handler_seq] = UIEventFilter(level, debug_domains)
+    if mainui:
+        global _uiready
+        _uiready = _ui_handler_seq
     return _ui_handler_seq
 
-def unregister_UIHhandler(handlerNum):
+def unregister_UIHhandler(handlerNum, mainui=False):
+    if mainui:
+        global _uiready
+        _uiready = False
     if handlerNum in _ui_handlers:
         del _ui_handlers[handlerNum]
     return
+
+def get_uihandler():
+    if _uiready is False:
+        return None
+    return _uiready
 
 # Class to allow filtering of events and specific filtering of LogRecords *before* we put them over the IPC
 class UIEventFilter(object):
@@ -353,13 +386,19 @@ class OperationProgress(Event):
 class ConfigParsed(Event):
     """Configuration Parsing Complete"""
 
+class MultiConfigParsed(Event):
+    """Multi-Config Parsing Complete"""
+    def __init__(self, mcdata):
+        self.mcdata = mcdata
+        Event.__init__(self)
+
 class RecipeEvent(Event):
     def __init__(self, fn):
         self.fn = fn
         Event.__init__(self)
 
 class RecipePreFinalise(RecipeEvent):
-    """ Recipe Parsing Complete but not yet finialised"""
+    """ Recipe Parsing Complete but not yet finalised"""
 
 class RecipeTaskPreProcess(RecipeEvent):
     """
@@ -413,12 +452,6 @@ class BuildBase(Event):
     def setName(self, name):
         self._name = name
 
-    def getCfg(self):
-        return self.data
-
-    def setCfg(self, cfg):
-        self.data = cfg
-
     def getFailures(self):
         """
         Return the number of failed packages
@@ -427,9 +460,6 @@ class BuildBase(Event):
 
     pkgs = property(getPkgs, setPkgs, None, "pkgs property")
     name = property(getName, setName, None, "name property")
-    cfg = property(getCfg, setCfg, None, "cfg property")
-
-
 
 class BuildInit(BuildBase):
     """buildFile or buildTargets was invoked"""
@@ -496,6 +526,28 @@ class NoProvider(Event):
     def isRuntime(self):
         return self._runtime
 
+    def __str__(self):
+        msg = ''
+        if self._runtime:
+            r = "R"
+        else:
+            r = ""
+
+        extra = ''
+        if not self._reasons:
+            if self._close_matches:
+                extra = ". Close matches:\n  %s" % '\n  '.join(self._close_matches)
+
+        if self._dependees:
+            msg = "Nothing %sPROVIDES '%s' (but %s %sDEPENDS on or otherwise requires it)%s" % (r, self._item, ", ".join(self._dependees), r, extra)
+        else:
+            msg = "Nothing %sPROVIDES '%s'%s" % (r, self._item, extra)
+        if self._reasons:
+            for reason in self._reasons:
+                msg += '\n' + reason
+        return msg
+
+
 class MultipleProviders(Event):
     """Multiple Providers"""
 
@@ -522,6 +574,16 @@ class MultipleProviders(Event):
         Get the possible Candidates for a PROVIDER.
         """
         return self._candidates
+
+    def __str__(self):
+        msg = "Multiple providers are available for %s%s (%s)" % (self._is_runtime and "runtime " or "",
+                            self._item,
+                            ", ".join(self._candidates))
+        rtime = ""
+        if self._is_runtime:
+            rtime = "R"
+        msg += "\nConsider defining a PREFERRED_%sPROVIDER entry to match %s" % (rtime, self._item)
+        return msg
 
 class ParseStarted(OperationStarted):
     """Recipe parsing for the runqueue has begun"""
@@ -616,14 +678,6 @@ class FilesMatchingFound(Event):
         self._pattern = pattern
         self._matches = matches
 
-class CoreBaseFilesFound(Event):
-    """
-    Event when a list of appropriate config files has been generated
-    """
-    def __init__(self, paths):
-        Event.__init__(self)
-        self._paths = paths
-
 class ConfigFilesFound(Event):
     """
     Event when a list of appropriate config files has been generated
@@ -693,19 +747,6 @@ class LogHandler(logging.Handler):
     def filter(self, record):
         record.taskpid = worker_pid
         return True
-
-class RequestPackageInfo(Event):
-    """
-    Event to request package information
-    """
-
-class PackageInfo(Event):
-    """
-    Package information for GUI
-    """
-    def __init__(self, pkginfolist):
-        Event.__init__(self)
-        self._pkginfolist = pkginfolist
 
 class MetadataEvent(Event):
     """
@@ -784,3 +825,10 @@ class NetworkTestFailed(Event):
     Event to indicate network test has failed
     """
 
+class FindSigInfoResult(Event):
+    """
+    Event to return results from findSigInfo command
+    """
+    def __init__(self, result):
+        Event.__init__(self)
+        self.result = result

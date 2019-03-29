@@ -1,4 +1,6 @@
 import subprocess
+import multiprocessing
+import traceback
 
 def read_file(filename):
     try:
@@ -22,6 +24,13 @@ def conditional(variable, checkvalue, truevalue, falsevalue, d):
         return truevalue
     else:
         return falsevalue
+
+def vartrue(var, iftrue, iffalse, d):
+    import oe.types
+    if oe.types.boolean(d.getVar(var)):
+        return iftrue
+    else:
+        return iffalse
 
 def less_or_equal(variable, checkvalue, truevalue, falsevalue, d):
     if float(d.getVar(variable)) <= float(checkvalue):
@@ -86,17 +95,6 @@ def str_filter_out(f, str, d):
     from re import match
     return " ".join([x for x in str.split() if not match(f, x, 0)])
 
-def param_bool(cfg, field, dflt = None):
-    """Lookup <field> in <cfg> map and convert it to a boolean; take
-    <dflt> when this <field> does not exist"""
-    value = cfg.get(field, dflt)
-    strvalue = str(value).lower()
-    if strvalue in ('yes', 'y', 'true', 't', '1'):
-        return True
-    elif strvalue in ('no', 'n', 'false', 'f', '0'):
-        return False
-    raise ValueError("invalid value for boolean parameter '%s': '%s'" % (field, value))
-
 def build_depends_string(depends, task):
     """Append a taskname to a string of dependencies as used by the [depends] flag"""
     return " ".join(dep + ":" + task for dep in depends.split())
@@ -126,6 +124,89 @@ def features_backfill(var,d):
     if addfeatures:
         d.appendVar(var, " " + " ".join(addfeatures))
 
+def all_distro_features(d, features, truevalue="1", falsevalue=""):
+    """
+    Returns truevalue if *all* given features are set in DISTRO_FEATURES,
+    else falsevalue. The features can be given as single string or anything
+    that can be turned into a set.
+
+    This is a shorter, more flexible version of
+    bb.utils.contains("DISTRO_FEATURES", features, truevalue, falsevalue, d).
+
+    Without explicit true/false values it can be used directly where
+    Python expects a boolean:
+       if oe.utils.all_distro_features(d, "foo bar"):
+           bb.fatal("foo and bar are mutually exclusive DISTRO_FEATURES")
+
+    With just a truevalue, it can be used to include files that are meant to be
+    used only when requested via DISTRO_FEATURES:
+       require ${@ oe.utils.all_distro_features(d, "foo bar", "foo-and-bar.inc")
+    """
+    return bb.utils.contains("DISTRO_FEATURES", features, truevalue, falsevalue, d)
+
+def any_distro_features(d, features, truevalue="1", falsevalue=""):
+    """
+    Returns truevalue if at least *one* of the given features is set in DISTRO_FEATURES,
+    else falsevalue. The features can be given as single string or anything
+    that can be turned into a set.
+
+    This is a shorter, more flexible version of
+    bb.utils.contains_any("DISTRO_FEATURES", features, truevalue, falsevalue, d).
+
+    Without explicit true/false values it can be used directly where
+    Python expects a boolean:
+       if not oe.utils.any_distro_features(d, "foo bar"):
+           bb.fatal("foo, bar or both must be set in DISTRO_FEATURES")
+
+    With just a truevalue, it can be used to include files that are meant to be
+    used only when requested via DISTRO_FEATURES:
+       require ${@ oe.utils.any_distro_features(d, "foo bar", "foo-or-bar.inc")
+
+    """
+    return bb.utils.contains_any("DISTRO_FEATURES", features, truevalue, falsevalue, d)
+
+def parallel_make(d):
+    """
+    Return the integer value for the number of parallel threads to use when
+    building, scraped out of PARALLEL_MAKE. If no parallelization option is
+    found, returns None
+
+    e.g. if PARALLEL_MAKE = "-j 10", this will return 10 as an integer.
+    """
+    pm = (d.getVar('PARALLEL_MAKE') or '').split()
+    # look for '-j' and throw other options (e.g. '-l') away
+    while pm:
+        opt = pm.pop(0)
+        if opt == '-j':
+            v = pm.pop(0)
+        elif opt.startswith('-j'):
+            v = opt[2:].strip()
+        else:
+            continue
+
+        return int(v)
+
+    return None
+
+def parallel_make_argument(d, fmt, limit=None):
+    """
+    Helper utility to construct a parallel make argument from the number of
+    parallel threads specified in PARALLEL_MAKE.
+
+    Returns the input format string `fmt` where a single '%d' will be expanded
+    with the number of parallel threads to use. If `limit` is specified, the
+    number of parallel threads will be no larger than it. If no parallelization
+    option is found in PARALLEL_MAKE, returns an empty string
+
+    e.g. if PARALLEL_MAKE = "-j 10", parallel_make_argument(d, "-n %d") will return
+    "-n 10"
+    """
+    v = parallel_make(d)
+    if v:
+        if limit:
+            v = min(limit, v)
+        return fmt % v
+    return ''
 
 def packages_filter_out_system(d):
     """
@@ -174,34 +255,74 @@ def execute_pre_post_process(d, cmds):
             bb.note("Executing %s ..." % cmd)
             bb.build.exec_func(cmd, d)
 
-def multiprocess_exec(commands, function):
-    import signal
-    import multiprocessing
+# For each item in items, call the function 'target' with item as the first 
+# argument, extraargs as the other arguments and handle any exceptions in the
+# parent thread
+def multiprocess_launch(target, items, d, extraargs=None):
 
-    if not commands:
-        return []
+    class ProcessLaunch(multiprocessing.Process):
+        def __init__(self, *args, **kwargs):
+            multiprocessing.Process.__init__(self, *args, **kwargs)
+            self._pconn, self._cconn = multiprocessing.Pipe()
+            self._exception = None
+            self._result = None
 
-    def init_worker():
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        def run(self):
+            try:
+                ret = self._target(*self._args, **self._kwargs)
+                self._cconn.send((None, ret))
+            except Exception as e:
+                tb = traceback.format_exc()
+                self._cconn.send((e, tb))
 
-    nproc = min(multiprocessing.cpu_count(), len(commands))
-    pool = bb.utils.multiprocessingpool(nproc, init_worker)
-    imap = pool.imap(function, commands)
+        def update(self):
+            if self._pconn.poll():
+                (e, tb) = self._pconn.recv()
+                if e is not None:
+                    self._exception = (e, tb)
+                else:
+                    self._result = tb
 
-    try:
-        res = list(imap)
-        pool.close()
-        pool.join()
-        results = []
-        for result in res:
-            if result is not None:
-                results.append(result)
-        return results
+        @property
+        def exception(self):
+            self.update()
+            return self._exception
 
-    except KeyboardInterrupt:
-        pool.terminate()
-        pool.join()
-        raise
+        @property
+        def result(self):
+            self.update()
+            return self._result
+
+    max_process = int(d.getVar("BB_NUMBER_THREADS") or os.cpu_count() or 1)
+    launched = []
+    errors = []
+    results = []
+    items = list(items)
+    while (items and not errors) or launched:
+        if not errors and items and len(launched) < max_process:
+            args = (items.pop(),)
+            if extraargs is not None:
+                args = args + extraargs
+            p = ProcessLaunch(target=target, args=args)
+            p.start()
+            launched.append(p)
+        for q in launched:
+            # The finished processes are joined when calling is_alive()
+            if not q.is_alive():
+                if q.exception:
+                    errors.append(q.exception)
+                if q.result:
+                    results.append(q.result)
+                launched.remove(q)
+    # Paranoia doesn't hurt
+    for p in launched:
+        p.join()
+    if errors:
+        msg = ""
+        for (e, tb) in errors:
+            msg = msg + str(e) + ": " + str(tb) + "\n"
+        bb.fatal("Fatal errors occurred in subprocesses:\n%s" % msg)
+    return results
 
 def squashspaces(string):
     import re
@@ -227,10 +348,19 @@ def format_pkg_list(pkg_dict, ret_format=None):
         for pkg in sorted(pkg_dict):
             output.append(pkg)
 
-    return '\n'.join(output)
+    output_str = '\n'.join(output)
 
-def host_gcc_version(d):
+    if output_str:
+        # make sure last line is newline terminated
+        output_str += '\n'
+
+    return output_str
+
+def host_gcc_version(d, taskcontextonly=False):
     import re, subprocess
+
+    if taskcontextonly and d.getVar('BB_WORKERCONTEXT') != '1':
+        return
 
     compiler = d.getVar("BUILD_CC")
     try:
@@ -246,6 +376,23 @@ def host_gcc_version(d):
 
     version = match.group(1)
     return "-%s" % version if version in ("4.8", "4.9") else ""
+
+
+def get_multilib_datastore(variant, d):
+    localdata = bb.data.createCopy(d)
+    if variant:
+        overrides = localdata.getVar("OVERRIDES", False) + ":virtclass-multilib-" + variant
+        localdata.setVar("OVERRIDES", overrides)
+        localdata.setVar("MLPREFIX", variant + "-")
+    else:
+        origdefault = localdata.getVar("DEFAULTTUNE_MULTILIB_ORIGINAL")
+        if origdefault:
+            localdata.setVar("DEFAULTTUNE", origdefault)
+        overrides = localdata.getVar("OVERRIDES", False).split(":")
+        overrides = ":".join([x for x in overrides if not x.startswith("virtclass-multilib-")])
+        localdata.setVar("OVERRIDES", overrides)
+        localdata.setVar("MLPREFIX", "")
+    return localdata
 
 #
 # Python 2.7 doesn't have threaded pools (just multiprocessing)
@@ -334,3 +481,4 @@ class ImageQAFailed(bb.build.FuncFailed):
             msg = msg + ' (%s)' % self.description
 
         return msg
+

@@ -113,7 +113,7 @@ def copy_needed_files(d, tc):
     oe.path.remove(cases_path)
     bb.utils.mkdirhier(cases_path)
     test_paths = get_runtime_paths(d)
-    test_modules = d.getVar('TEST_SUITES')
+    test_modules = d.getVar('TEST_SUITES').split()
     tc.loadTests(test_paths, modules=test_modules)
     for f in getSuiteCasesFiles(tc.suites):
         shutil.copy2(f, cases_path)
@@ -130,6 +130,11 @@ def copy_needed_files(d, tc):
     bb.utils.mkdirhier(test_data_path)
     shutil.copy2(image_manifest, os.path.join(test_data_path, 'manifest'))
     shutil.copy2(tdname, os.path.join(test_data_path, 'testdata.json'))
+
+    for subdir, dirs, files in os.walk(export_path):
+        for dir in dirs:
+            if dir == '__pycache__':
+                shutil.rmtree(os.path.join(subdir, dir))
 
     # Create tar file for common parts of testexport
     create_tarball(d, "testexport.tar.gz", d.getVar("TEST_EXPORT_DIR"))

@@ -23,9 +23,6 @@
 #    COPYLEFT_RECIPE_TYPES = 'target'
 #
 
-# Don't filter the license by default
-COPYLEFT_LICENSE_INCLUDE ?= ''
-COPYLEFT_LICENSE_EXCLUDE ?= ''
 # Create archive for all the recipe types
 COPYLEFT_RECIPE_TYPES ?= 'target native nativesdk cross crosssdk cross-canadian'
 inherit copyleft_filter
@@ -46,7 +43,6 @@ do_dumpdata[dirs] = "${ARCHIVER_OUTDIR}"
 do_ar_recipe[dirs] = "${ARCHIVER_OUTDIR}"
 do_ar_original[dirs] = "${ARCHIVER_OUTDIR} ${ARCHIVER_WORKDIR}"
 do_deploy_archives[dirs] = "${WORKDIR}"
-do_deploy_all_archives[dirs] = "${WORKDIR}"
 
 # This is a convenience for the shell script to use it
 
@@ -67,6 +63,12 @@ python () {
     else:
         bb.debug(1, 'archiver: %s is included: %s' % (pn, reason))
 
+
+    # glibc-locale: do_fetch, do_unpack and do_patch tasks have been deleted,
+    # so avoid archiving source here.
+    if pn.startswith('glibc-locale'):
+        return
+
     # We just archive gcc-source for all the gcc related recipes
     if d.getVar('BPN') in ['gcc', 'libgcc'] \
             and not pn.startswith('gcc-source'):
@@ -79,6 +81,11 @@ python () {
 
     if ar_src == "original":
         d.appendVarFlag('do_deploy_archives', 'depends', ' %s:do_ar_original' % pn)
+        # 'patched' and 'configured' invoke do_unpack_and_patch because
+        # do_ar_patched resp. do_ar_configured depend on it, but for 'original'
+        # we have to add it explicitly.
+        if d.getVarFlag('ARCHIVER_MODE', 'diff') == '1':
+            d.appendVarFlag('do_deploy_archives', 'depends', ' %s:do_unpack_and_patch' % pn)
     elif ar_src == "patched":
         d.appendVarFlag('do_deploy_archives', 'depends', ' %s:do_ar_patched' % pn)
     elif ar_src == "configured":
@@ -88,9 +95,12 @@ python () {
 
         # There is a corner case with "gcc-source-${PV}" recipes, they don't have
         # the "do_configure" task, so we need to use "do_preconfigure"
-        if pn.startswith("gcc-source-"):
+        def hasTask(task):
+            return bool(d.getVarFlag(task, "task", False)) and not bool(d.getVarFlag(task, "noexec", False))
+
+        if hasTask("do_preconfigure"):
             d.appendVarFlag('do_ar_configured', 'depends', ' %s:do_preconfigure' % pn)
-        else:
+        elif hasTask("do_configure"):
             d.appendVarFlag('do_ar_configured', 'depends', ' %s:do_configure' % pn)
         d.appendVarFlag('do_deploy_archives', 'depends', ' %s:do_ar_configured' % pn)
 
@@ -103,10 +113,9 @@ python () {
     if ar_recipe == "1":
         d.appendVarFlag('do_deploy_archives', 'depends', ' %s:do_ar_recipe' % pn)
 
-    # Output the srpm package
-    ar_srpm = d.getVarFlag('ARCHIVER_MODE', 'srpm')
-    if ar_srpm == "1":
-        if d.getVar('PACKAGES') != '' and d.getVar('IMAGE_PKGTYPE') == 'rpm':
+    # Output the SRPM package
+    if d.getVarFlag('ARCHIVER_MODE', 'srpm') == "1" and d.getVar('PACKAGES'):
+        if "package_rpm" in d.getVar('PACKAGE_CLASSES'):
             d.appendVarFlag('do_deploy_archives', 'depends', ' %s:do_package_write_rpm' % pn)
             if ar_dumpdata == "1":
                 d.appendVarFlag('do_package_write_rpm', 'depends', ' %s:do_dumpdata' % pn)
@@ -118,6 +127,8 @@ python () {
                 d.appendVarFlag('do_package_write_rpm', 'depends', ' %s:do_ar_patched' % pn)
             elif ar_src == "configured":
                 d.appendVarFlag('do_package_write_rpm', 'depends', ' %s:do_ar_configured' % pn)
+        else:
+            bb.fatal("ARCHIVER_MODE[srpm] needs package_rpm in PACKAGE_CLASSES")
 }
 
 # Take all the sources for a recipe and puts them in WORKDIR/archiver-work/.
@@ -166,12 +177,18 @@ python do_ar_original() {
             # to be set when using the git fetcher, otherwise SRCREV cannot
             # be set separately for each URL.
             params = bb.fetch2.decodeurl(url)[5]
+            type = bb.fetch2.decodeurl(url)[0]
+            location = bb.fetch2.decodeurl(url)[2]
             name = params.get('name', '')
-            if name in tarball_suffix:
-                if not name:
-                    bb.fatal("Cannot determine archive names for original source because 'name' URL parameter is unset in more than one URL. Add it to at least one of these: %s %s" % (tarball_suffix[name], url))
-                else:
-                    bb.fatal("Cannot determine archive names for original source because 'name=' URL parameter '%s' is used twice. Make it unique in: %s %s" % (tarball_suffix[name], url))
+            if type.lower() == 'file':
+                name_tmp = location.rstrip("*").rstrip("/")
+                name = os.path.basename(name_tmp)
+            else:
+                if name in tarball_suffix:
+                    if not name:
+                        bb.fatal("Cannot determine archive names for original source because 'name' URL parameter is unset in more than one URL. Add it to at least one of these: %s %s" % (tarball_suffix[name], url))
+                    else:
+                        bb.fatal("Cannot determine archive names for original source because 'name=' URL parameter '%s' is used twice. Make it unique in: %s %s" % (tarball_suffix[name], url))
             tarball_suffix[name] = url
             create_tarball(d, tmpdir + '/.', name, ar_outdir)
 
@@ -205,6 +222,12 @@ python do_ar_patched() {
 python do_ar_configured() {
     import shutil
 
+    # Forcibly expand the sysroot paths as we're about to change WORKDIR
+    d.setVar('STAGING_DIR_HOST', d.getVar('STAGING_DIR_HOST'))
+    d.setVar('STAGING_DIR_TARGET', d.getVar('STAGING_DIR_TARGET'))
+    d.setVar('RECIPE_SYSROOT', d.getVar('RECIPE_SYSROOT'))
+    d.setVar('RECIPE_SYSROOT_NATIVE', d.getVar('RECIPE_SYSROOT_NATIVE'))
+
     ar_outdir = d.getVar('ARCHIVER_OUTDIR')
     if d.getVarFlag('ARCHIVER_MODE', 'src') == 'configured':
         bb.note('Archiving the configured source...')
@@ -220,21 +243,26 @@ python do_ar_configured() {
         # do_configure, we archive the already configured ${S} to
         # instead of.
         elif pn != 'libtool-native':
+            def runTask(task):
+                prefuncs = d.getVarFlag(task, 'prefuncs') or ''
+                for func in prefuncs.split():
+                    if func != "sysroot_cleansstate":
+                        bb.build.exec_func(func, d)
+                bb.build.exec_func(task, d)
+                postfuncs = d.getVarFlag(task, 'postfuncs') or ''
+                for func in postfuncs.split():
+                    if func != 'do_qa_configure':
+                        bb.build.exec_func(func, d)
+
             # Change the WORKDIR to make do_configure run in another dir.
             d.setVar('WORKDIR', d.getVar('ARCHIVER_WORKDIR'))
-            if bb.data.inherits_class('kernel-yocto', d):
-                bb.build.exec_func('do_kernel_configme', d)
-            if bb.data.inherits_class('cmake', d):
-                bb.build.exec_func('do_generate_toolchain_file', d)
-            prefuncs = d.getVarFlag('do_configure', 'prefuncs')
-            for func in (prefuncs or '').split():
-                if func != "sysroot_cleansstate":
-                    bb.build.exec_func(func, d)
-            bb.build.exec_func('do_configure', d)
-            postfuncs = d.getVarFlag('do_configure', 'postfuncs')
-            for func in (postfuncs or '').split():
-                if func != "do_qa_configure":
-                    bb.build.exec_func(func, d)
+
+            preceeds = bb.build.preceedtask('do_configure', False, d)
+            for task in preceeds:
+                if task != 'do_patch' and task != 'do_prepare_recipe_sysroot':
+                    runTask(task)
+            runTask('do_configure')
+
         srcdir = d.getVar('S')
         builddir = d.getVar('B')
         if srcdir != builddir:
@@ -243,6 +271,14 @@ python do_ar_configured() {
                     'build.%s.ar_configured' % d.getVar('PF')))
         create_tarball(d, srcdir, 'configured', ar_outdir)
 }
+
+def exclude_useless_paths(tarinfo):
+    if tarinfo.isdir():
+        if tarinfo.name.endswith('/temp') or tarinfo.name.endswith('/patches') or tarinfo.name.endswith('/.pc'):
+            return None
+        elif tarinfo.name == 'temp' or tarinfo.name == 'patches' or tarinfo.name == '.pc':
+            return None
+    return tarinfo
 
 def create_tarball(d, srcdir, suffix, ar_outdir):
     """
@@ -254,6 +290,11 @@ def create_tarball(d, srcdir, suffix, ar_outdir):
     if (d.getVar('SRC_URI') == ""):
         return
 
+    # For the kernel archive, srcdir may just be a link to the
+    # work-shared location. Use os.path.realpath to make sure
+    # that we archive the actual directory and not just the link.
+    srcdir = os.path.realpath(srcdir)
+
     bb.utils.mkdirhier(ar_outdir)
     if suffix:
         filename = '%s-%s.tar.gz' % (d.getVar('PF'), suffix)
@@ -263,7 +304,7 @@ def create_tarball(d, srcdir, suffix, ar_outdir):
 
     bb.note('Creating %s' % tarname)
     tar = tarfile.open(tarname, 'w:gz')
-    tar.add(srcdir, arcname=os.path.basename(srcdir))
+    tar.add(srcdir, arcname=os.path.basename(srcdir), filter=exclude_useless_paths)
     tar.close()
 
 # creating .diff.gz between source.orig and source
@@ -285,11 +326,20 @@ def create_diff_gz(d, src_orig, src, ar_outdir):
 
     dirname = os.path.dirname(src)
     basename = os.path.basename(src)
-    os.chdir(dirname)
-    out_file = os.path.join(ar_outdir, '%s-diff.gz' % d.getVar('PF'))
-    diff_cmd = 'diff -Naur %s.orig %s.patched | gzip -c > %s' % (basename, basename, out_file)
-    subprocess.call(diff_cmd, shell=True)
-    bb.utils.remove(src_patched, recurse=True)
+    bb.utils.mkdirhier(ar_outdir)
+    cwd = os.getcwd()
+    try:
+        os.chdir(dirname)
+        out_file = os.path.join(ar_outdir, '%s-diff.gz' % d.getVar('PF'))
+        diff_cmd = 'diff -Naur %s.orig %s.patched | gzip -c > %s' % (basename, basename, out_file)
+        subprocess.check_call(diff_cmd, shell=True)
+        bb.utils.remove(src_patched, recurse=True)
+    finally:
+        os.chdir(cwd)
+
+def is_work_shared(d):
+    pn = d.getVar('PN')
+    return bb.data.inherits_class('kernel', d) or pn.startswith('gcc-source')
 
 # Run do_unpack and do_patch
 python do_unpack_and_patch() {
@@ -299,12 +349,15 @@ python do_unpack_and_patch() {
         return
     ar_outdir = d.getVar('ARCHIVER_OUTDIR')
     ar_workdir = d.getVar('ARCHIVER_WORKDIR')
+    ar_sysroot_native = d.getVar('STAGING_DIR_NATIVE')
     pn = d.getVar('PN')
 
     # The kernel class functions require it to be on work-shared, so we dont change WORKDIR
-    if not (bb.data.inherits_class('kernel-yocto', d) or pn.startswith('gcc-source')):
+    if not is_work_shared(d):
         # Change the WORKDIR to make do_unpack do_patch run in another dir.
         d.setVar('WORKDIR', ar_workdir)
+        # Restore the original path to recipe's native sysroot (it's relative to WORKDIR).
+        d.setVar('STAGING_DIR_NATIVE', ar_sysroot_native)
 
         # The changed 'WORKDIR' also caused 'B' changed, create dir 'B' for the
         # possibly requiring of the following tasks (such as some recipes's
@@ -320,7 +373,7 @@ python do_unpack_and_patch() {
         oe.path.copytree(src, src_orig)
 
     # Make sure gcc and kernel sources are patched only once
-    if not (d.getVar('SRC_URI') == "" or (bb.data.inherits_class('kernel-yocto', d) or pn.startswith('gcc-source'))):
+    if not (d.getVar('SRC_URI') == "" or is_work_shared(d)):
         bb.build.exec_func('do_patch', d)
 
     # Create the patches
@@ -330,6 +383,19 @@ python do_unpack_and_patch() {
         bb.utils.remove(src_orig, recurse=True)
 }
 
+# BBINCLUDED is special (excluded from basehash signature
+# calculation). Using it in a task signature can cause "basehash
+# changed" errors.
+#
+# Depending on BBINCLUDED also causes do_ar_recipe to run again
+# for unrelated changes, like adding or removing buildhistory.bbclass.
+#
+# For these reasons we ignore the dependency completely. The versioning
+# of the output file ensures that we create it each time the recipe
+# gets rebuilt, at least as long as a PR server is used. We also rely
+# on that mechanism to catch changes in the file content, because the
+# file content is not part of of the task signature either.
+do_ar_recipe[vardepsexclude] += "BBINCLUDED"
 python do_ar_recipe () {
     """
     archive the recipe, including .bb and .inc.
@@ -349,8 +415,8 @@ python do_ar_recipe () {
     bbappend_files = d.getVar('BBINCLUDED').split()
     # If recipe name is aa, we need to match files like aa.bbappend and aa_1.1.bbappend
     # Files like aa1.bbappend or aa1_1.1.bbappend must be excluded.
-    bbappend_re = re.compile( r".*/%s_[^/]*\.bbappend$" %pn)
-    bbappend_re1 = re.compile( r".*/%s\.bbappend$" %pn)
+    bbappend_re = re.compile( r".*/%s_[^/]*\.bbappend$" % re.escape(pn))
+    bbappend_re1 = re.compile( r".*/%s\.bbappend$" % re.escape(pn))
     for file in bbappend_files:
         if bbappend_re.match(file) or bbappend_re1.match(file):
             shutil.copy(file, outdir)
@@ -411,15 +477,11 @@ addtask do_dumpdata
 addtask do_ar_recipe
 addtask do_deploy_archives before do_build
 
-addtask do_deploy_all_archives after do_deploy_archives
-do_deploy_all_archives[recrdeptask] = "do_deploy_archives"
-do_deploy_all_archives[recideptask] = "do_${BB_DEFAULT_TASK}"
-do_deploy_all_archives() {
-        :
-}
-
 python () {
-    # Add tasks in the correct order, specifically for linux-yocto to avoid race condition
+    # Add tasks in the correct order, specifically for linux-yocto to avoid race condition.
+    # sstatesig.py:sstate_rundepfilter has special support that excludes this dependency
+    # so that do_kernel_configme does not need to run again when do_unpack_and_patch
+    # gets added or removed (by adding or removing archiver.bbclass).
     if bb.data.inherits_class('kernel-yocto', d):
         bb.build.addtask('do_kernel_configme', 'do_configure', 'do_unpack_and_patch', d)
 }

@@ -19,7 +19,11 @@ SRC_URI = "${SOURCEFORGE_MIRROR}/infozip/UnZip%206.x%20%28latest%29/UnZip%206.0/
 	file://fix-security-format.patch \
 	file://18-cve-2014-9913-unzip-buffer-overflow.patch \
 	file://19-cve-2016-9844-zipinfo-buffer-overflow.patch \
+	file://symlink.patch \
+	file://0001-unzip-fix-CVE-2018-1000035.patch \
+	file://CVE-2018-18384.patch \
 "
+UPSTREAM_VERSION_UNKNOWN = "1"
 
 SRC_URI[md5sum] = "62b490407489521db863b523a7f86375"
 SRC_URI[sha256sum] = "036d96991646d0449ed0aa952e4fbe21b476ce994abc276e49d30e686708bd37"
@@ -57,4 +61,4 @@ ALTERNATIVE_PRIORITY = "100"
 ALTERNATIVE_${PN} = "unzip"
 ALTERNATIVE_LINK_NAME[unzip] = "${bindir}/unzip"
 
-BBCLASSEXTEND = "native"
+BBCLASSEXTEND = "native nativesdk"

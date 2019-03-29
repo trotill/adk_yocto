@@ -1,4 +1,4 @@
-from django.core.management.base import NoArgsCommand, CommandError
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from django.core.management import call_command
@@ -18,7 +18,7 @@ def DN(path):
         return os.path.dirname(path)
 
 
-class Command(NoArgsCommand):
+class Command(BaseCommand):
     args = ""
     help = "Verifies that the configured settings are valid and usable, or prompts the user to fix the settings."
 
@@ -74,8 +74,12 @@ class Command(NoArgsCommand):
                         print("Loading default settings")
                         call_command("loaddata", "settings")
                         template_conf = os.environ.get("TEMPLATECONF", "")
+                        custom_xml_only = os.environ.get("CUSTOM_XML_ONLY")
 
-                        if "poky" in template_conf:
+                        if ToasterSetting.objects.filter(name='CUSTOM_XML_ONLY').count() > 0 or (not custom_xml_only == None):
+                            # only use the custom settings
+                            pass
+                        elif "poky" in template_conf:
                             print("Loading poky configuration")
                             call_command("loaddata", "poky")
                         else:
@@ -104,7 +108,10 @@ class Command(NoArgsCommand):
                                 action="ignore",
                                 message="^.*No fixture named.*$")
                             print("Importing custom settings if present")
-                            call_command("loaddata", "custom")
+                            try:
+                                call_command("loaddata", "custom")
+                            except:
+                                print("NOTE: optional fixture 'custom' not found")
 
                         # we run lsupdates after config update
                         print("\nFetching information from the layer index, "
@@ -152,7 +159,7 @@ class Command(NoArgsCommand):
 
 
 
-    def handle_noargs(self, **options):
+    def handle(self, **options):
         retval = 0
         retval += self._verify_build_environment()
         retval += self._verify_default_settings()

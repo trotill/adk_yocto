@@ -14,6 +14,9 @@ function projectTopBarInit(ctx) {
   var newBuildTargetBuildBtn = $("#build-button");
   var selectedTarget;
 
+  var updateProjectBtn = $("#update-project-button");
+  var cancelProjectBtn = $("#cancel-project-button");
+
   /* Project name change functionality */
   projectNameFormToggle.click(function(e){
     e.preventDefault();
@@ -73,20 +76,39 @@ function projectTopBarInit(ctx) {
 
   newBuildTargetBuildBtn.click(function (e) {
     e.preventDefault();
-    if (!newBuildTargetInput.val()) {
+    if (!newBuildTargetInput.val().trim()) {
       return;
     }
     /* We use the value of the input field so as to maintain any command also
      * added e.g. core-image-minimal:clean and because we can build targets
      * that toaster doesn't yet know about
      */
-    selectedTarget = { name: newBuildTargetInput.val() };
+    selectedTarget = { name: newBuildTargetInput.val().trim() };
 
     /* Fire off the build */
     libtoaster.startABuild(null, selectedTarget.name,
       function(){
         window.location.replace(libtoaster.ctx.projectBuildsUrl);
     }, null);
+  });
+
+  updateProjectBtn.click(function (e) {
+    e.preventDefault();
+
+    selectedTarget = { name: "_PROJECT_PREPARE_" };
+
+    /* Save current default build image, fire off the build */
+    libtoaster.updateProject(null, selectedTarget.name, newBuildTargetInput.val().trim(),
+      function(){
+        window.location.replace(libtoaster.ctx.projectSpecificPageUrl);
+    }, null);
+  });
+
+  cancelProjectBtn.click(function (e) {
+    e.preventDefault();
+
+    /* redirect to 'done/canceled' landing page */
+    window.location.replace(libtoaster.ctx.landingSpecificCancelURL);
   });
 
   /* Call makeProjectNameValidation function */

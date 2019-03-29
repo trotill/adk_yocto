@@ -61,6 +61,12 @@ function mrbSectionInit(ctx){
     return (cached.recipes_parsed_percentage !== build.recipes_parsed_percentage);
   }
 
+  // returns true if the number of repos cloned/to clone changed
+  function cloneProgressChanged(build) {
+    var cached = getCached(build);
+    return (cached.repos_cloned_percentage !== build.repos_cloned_percentage);
+  }
+
   function refreshMostRecentBuilds(){
     libtoaster.getMostRecentBuilds(
       libtoaster.ctx.mostRecentBuildsUrl,
@@ -80,7 +86,7 @@ function mrbSectionInit(ctx){
           if (buildFinished(build)) {
             // a build finished: reload the whole page so that the build
             // shows up in the builds table
-            window.location.reload();
+            window.location.reload(true);
           }
           else if (stateChanged(build)) {
             // update the whole template
@@ -99,6 +105,17 @@ function mrbSectionInit(ctx){
             html.find('span.glyphicon-question-sign').tooltip();
 
             container.html(html);
+          }
+          else if (cloneProgressChanged(build)) {
+            // update the clone progress text
+            selector = '#repos-cloned-percentage-' + build.id;
+            $(selector).html(build.repos_cloned_percentage);
+            selector = '#repos-cloned-progressitem-' + build.id;
+            $(selector).html('('+build.progress_item+')');
+
+            // update the recipe progress bar
+            selector = '#repos-cloned-percentage-bar-' + build.id;
+            $(selector).width(build.repos_cloned_percentage + '%');
           }
           else if (tasksProgressChanged(build)) {
             // update the task progress text

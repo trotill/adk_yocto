@@ -9,8 +9,9 @@ RDEPENDS_${PN} = "bash"
 
 inherit kernel-arch
 
-SRC_URI = "git://git.freescale.com/ppc/sdk/cst.git;nobranch=1"
-SRCREV = "a292f9d52c9e5837a4836436f7540f1b0c01db92"
+SRC_URI = "git://source.codeaurora.org/external/qoriq/qoriq-components/cst;nobranch=1 \
+"
+SRCREV = "f599f6126ae1a382a581dcd75e9ad2e34c79a183"
 
 S = "${WORKDIR}/git"
 

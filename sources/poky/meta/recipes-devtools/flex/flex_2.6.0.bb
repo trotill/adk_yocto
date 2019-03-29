@@ -43,6 +43,10 @@ do_install_append_class-nativesdk() {
 	create_wrapper ${D}/${bindir}/flex M4=${M4}
 }
 
+PACKAGES =+ "${PN}-libfl"
+
+FILES_${PN}-libfl = "${libdir}/libfl.so.* ${libdir}/libfl_pic.so.*"
+
 RDEPENDS_${PN} += "m4"
 RDEPENDS_${PN}-ptest += "bash gawk"
 
@@ -55,7 +59,11 @@ do_install_ptest() {
 	cp ${S}/build-aux/test-driver ${D}${PTEST_PATH}/build-aux/
 	cp -r ${S}/tests/* ${D}${PTEST_PATH}
 	cp -r ${B}/tests/* ${D}${PTEST_PATH}
-	sed -e 's/^Makefile:/_Makefile:/' \
+	sed -e 's,--sysroot=${STAGING_DIR_TARGET},,g' \
+	    -e 's|${DEBUG_PREFIX_MAP}||g' \
+	    -e 's:${HOSTTOOLS_DIR}/::g' \
+	    -e 's:${RECIPE_SYSROOT_NATIVE}::g' \
+	    -e 's:${BASE_WORKDIR}/${MULTIMACH_TARGET_SYS}::g' \-e 's/^Makefile:/_Makefile:/' \
 	    -e 's/^srcdir = \(.*\)/srcdir = ./' -e 's/^top_srcdir = \(.*\)/top_srcdir = ./' \
 	    -e 's/^builddir = \(.*\)/builddir = ./' -e 's/^top_builddir = \(.*\)/top_builddir = ./' \
 	    -i ${D}${PTEST_PATH}/Makefile

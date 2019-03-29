@@ -1,14 +1,14 @@
 SUMMARY = "the blessed package to manage your versions by scm tags"
 LICENSE = "MIT"
-LIC_FILES_CHKSUM = "file://LICENSE;md5=838c366f69b72c5df05c96dff79b35f2"
+LIC_FILES_CHKSUM = "file://PKG-INFO;beginline=8;endline=8;md5=8227180126797a0148f94f483f3e1489"
 
-SRC_URI[md5sum] = "b6916c78ed6253d6602444fad4279c5b"
-SRC_URI[sha256sum] = "daf12d05aa2155a46aa357453757ffdc47d87f839e62114f042bceac6a619e2f"
+SRC_URI[md5sum] = "cfec5d2dbbd0a85c40066f79035b5878"
+SRC_URI[sha256sum] = "a767141fecdab1c0b3c8e4c788ac912d7c94a0d6c452d40777ba84f918316379"
 
 PYPI_PACKAGE = "setuptools_scm"
 inherit pypi
 
-RDEPENDS_${PN}_class-target = "${PYTHON_PN}-py ${PYTHON_PN}-setuptools ${PYTHON_PN}-argparse ${PYTHON_PN}-debugger ${PYTHON_PN}-json"
+RDEPENDS_${PN}_class-target = "${PYTHON_PN}-py ${PYTHON_PN}-setuptools ${PYTHON_PN}-debugger ${PYTHON_PN}-json"
 RDEPENDS_${PN}_class-native = "${PYTHON_PN}-setuptools-native"
 
 BBCLASSEXTEND = "native"

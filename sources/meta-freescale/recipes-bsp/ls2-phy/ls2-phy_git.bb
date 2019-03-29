@@ -1,30 +1,28 @@
 SUMMARY = "Firmwares and Standalone Applications"
-LICENSE = "Freescale-EULA"
-LIC_FILES_CHKSUM = "file://EULA;md5=c9ae442cf1f9dd6c13dfad64b0ffe73f"
+LICENSE = "NXP-Binary-EULA"
+LIC_FILES_CHKSUM = "file://EULA.txt;md5=86d76166990962fa552f840ff08e5798"
 
-inherit deploy
+inherit deploy fsl-eula-unpack
 
-SRC_URI = "git://git.freescale.com/ppc/sdk/ls2-phy.git;branch=sdk-v2.0.x"
-SRCREV = "554f2648c6a4c6f974827ab326e8c1908dead6f1"
+SRC_URI = "git://github.com/nxp/qoriq-firmware-cortina.git;fsl-eula=true;nobranch=1"
+SRCREV = "9143c2a3adede595966583c00ca4edc99ec698cf"
 
 S = "${WORKDIR}/git"
 
 do_install () {
     install -d ${D}/boot
-    cp -fr ${S}/AQR405 ${D}/boot
-    cp -fr ${S}/CS4340 ${D}/boot
+    cp -fr ${S}/* ${D}/boot
 }
 
 do_deploy () {
     install -d ${DEPLOYDIR}/ls2-phy
-    cp -fr ${S}/AQR405 ${DEPLOYDIR}/ls2-phy
-    cp -fr ${S}/CS4340 ${DEPLOYDIR}/ls2-phy
+    cp -fr ${S}/* ${DEPLOYDIR}/ls2-phy
 }
 addtask deploy before do_build after do_install
 
 PACKAGES += "${PN}-image"
 FILES_${PN}-image += "/boot"
 
-COMPATIBLE_MACHINE = "(ls2080ardb|ls2088ardb)"
+COMPATIBLE_MACHINE = "(ls2080ardb|ls2088ardb|t2080|t4240|lx2160a)"
 PACKAGE_ARCH = "${MACHINE_ARCH}"
 

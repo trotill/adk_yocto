@@ -61,22 +61,15 @@ oe_runmake() {
 
 
 def base_dep_prepend(d):
-    #
-    # Ideally this will check a flag so we will operate properly in
-    # the case where host == build == target, for now we don't work in
-    # that case though.
-    #
+    if d.getVar('INHIBIT_DEFAULT_DEPS', False):
+        return ""
+    return "${BASE_DEFAULT_DEPS}"
 
-    deps = ""
-    # INHIBIT_DEFAULT_DEPS doesn't apply to the patch command.  Whether or  not
-    # we need that built is the responsibility of the patch function / class, not
-    # the application.
-    if not d.getVar('INHIBIT_DEFAULT_DEPS', False):
-        if (d.getVar('HOST_SYS') != d.getVar('BUILD_SYS')):
-            deps += " virtual/${TARGET_PREFIX}gcc virtual/${TARGET_PREFIX}compilerlibs virtual/libc "
-    return deps
+BASE_DEFAULT_DEPS = "virtual/${TARGET_PREFIX}gcc virtual/${TARGET_PREFIX}compilerlibs virtual/libc"
 
-BASEDEPENDS = "${@base_dep_prepend(d)}"
+BASEDEPENDS = ""
+BASEDEPENDS_class-target = "${@base_dep_prepend(d)}"
+BASEDEPENDS_class-nativesdk = "${@base_dep_prepend(d)}"
 
 DEPENDS_prepend="${BASEDEPENDS} "
 
@@ -107,8 +100,8 @@ def get_lic_checksum_file_list(d):
         # We only care about items that are absolute paths since
         # any others should be covered by SRC_URI.
         try:
-            path = bb.fetch.decodeurl(url)[2]
-            if not path:
+            (method, host, path, user, pswd, parm) = bb.fetch.decodeurl(url)
+            if method != "file" or not path:
                 raise bb.fetch.MalformedUrl(url)
 
             if path[0] == '/':
@@ -135,6 +128,12 @@ def setup_hosttools_dir(dest, toolsvar, d, fatal=True):
                 os.symlink(srctool, desttool)
             else:
                 notfound.append(tool)
+    # Force "python" -> "python2"
+    desttool = os.path.join(dest, "python")
+    if not os.path.exists(desttool):
+        srctool = "python2"
+        os.symlink(srctool, desttool)
+
     if notfound and fatal:
         bb.fatal("The following required tools (as specified by HOSTTOOLS) appear to be unavailable in PATH, please install them in order to proceed:\n  %s" % " ".join(notfound))
 
@@ -159,12 +158,8 @@ python base_do_fetch() {
 addtask unpack after do_fetch
 do_unpack[dirs] = "${WORKDIR}"
 
-python () {
-    if d.getVar('S') != d.getVar('WORKDIR'):
-        d.setVarFlag('do_unpack', 'cleandirs', '${S}')
-    else:
-        d.setVarFlag('do_unpack', 'cleandirs', os.path.join('${S}', 'patches'))
-}
+do_unpack[cleandirs] = "${@d.getVar('S') if os.path.normpath(d.getVar('S')) != os.path.normpath(d.getVar('WORKDIR')) else os.path.join('${S}', 'patches')}"
+
 python base_do_unpack() {
     src_uri = (d.getVar('SRC_URI') or "").split()
     if len(src_uri) == 0:
@@ -177,15 +172,9 @@ python base_do_unpack() {
         bb.fatal(str(e))
 }
 
-def pkgarch_mapping(d):
-    # Compatibility mappings of TUNE_PKGARCH (opt in)
-    if d.getVar("PKGARCHCOMPAT_ARMV7A"):
-        if d.getVar("TUNE_PKGARCH") == "armv7a-vfp-neon":
-            d.setVar("TUNE_PKGARCH", "armv7a")
-
 def get_layers_branch_rev(d):
     layers = (d.getVar("BBLAYERS") or "").split()
-    layers_branch_rev = ["%-17s = \"%s:%s\"" % (os.path.basename(i), \
+    layers_branch_rev = ["%-20s = \"%s:%s\"" % (os.path.basename(i), \
         base_get_metadata_git_branch(i, None).strip(), \
         base_get_metadata_git_revision(i, None)) \
             for i in layers]
@@ -213,7 +202,7 @@ def buildcfg_vars(d):
     for var in statusvars:
         value = d.getVar(var)
         if value is not None:
-            yield '%-17s = "%s"' % (var, value)
+            yield '%-20s = "%s"' % (var, value)
 
 def buildcfg_neededvars(d):
     needed_vars = oe.data.typed_value("BUILDCFG_NEEDEDVARS", d)
@@ -227,23 +216,30 @@ def buildcfg_neededvars(d):
         bb.fatal('The following variable(s) were not set: %s\nPlease set them directly, or choose a MACHINE or DISTRO that sets them.' % ', '.join(pesteruser))
 
 addhandler base_eventhandler
-base_eventhandler[eventmask] = "bb.event.ConfigParsed bb.event.BuildStarted bb.event.RecipePreFinalise bb.runqueue.sceneQueueComplete bb.event.RecipeParsed"
+base_eventhandler[eventmask] = "bb.event.ConfigParsed bb.event.MultiConfigParsed bb.event.BuildStarted bb.event.RecipePreFinalise bb.runqueue.sceneQueueComplete bb.event.RecipeParsed"
 python base_eventhandler() {
     import bb.runqueue
 
     if isinstance(e, bb.event.ConfigParsed):
-        if not e.data.getVar("NATIVELSBSTRING", False):
-            e.data.setVar("NATIVELSBSTRING", lsb_distro_identifier(e.data))
-        e.data.setVar('BB_VERSION', bb.__version__)
-        pkgarch_mapping(e.data)
-        oe.utils.features_backfill("DISTRO_FEATURES", e.data)
-        oe.utils.features_backfill("MACHINE_FEATURES", e.data)
+        if not d.getVar("NATIVELSBSTRING", False):
+            d.setVar("NATIVELSBSTRING", lsb_distro_identifier(d))
+        d.setVar('BB_VERSION', bb.__version__)
         # Works with the line in layer.conf which changes PATH to point here
         setup_hosttools_dir(d.getVar('HOSTTOOLS_DIR'), 'HOSTTOOLS', d)
         setup_hosttools_dir(d.getVar('HOSTTOOLS_DIR'), 'HOSTTOOLS_NONFATAL', d, fatal=False)
 
+    if isinstance(e, bb.event.MultiConfigParsed):
+        # We need to expand SIGGEN_EXCLUDE_SAFE_RECIPE_DEPS in each of the multiconfig data stores
+        # own contexts so the variables get expanded correctly for that arch, then inject back into
+        # the main data store.
+        deps = []
+        for config in e.mcdata:
+            deps.append(e.mcdata[config].getVar("SIGGEN_EXCLUDE_SAFE_RECIPE_DEPS"))
+        deps = " ".join(deps)
+        e.mcdata[''].setVar("SIGGEN_EXCLUDE_SAFE_RECIPE_DEPS", deps)
+
     if isinstance(e, bb.event.BuildStarted):
-        localdata = bb.data.createCopy(e.data)
+        localdata = bb.data.createCopy(d)
         statuslines = []
         for func in oe.data.typed_value('BUILDCFG_FUNCS', localdata):
             g = globals()
@@ -254,7 +250,7 @@ python base_eventhandler() {
                 if flines:
                     statuslines.extend(flines)
 
-        statusheader = e.data.getVar('BUILDCFG_HEADER')
+        statusheader = d.getVar('BUILDCFG_HEADER')
         if statusheader:
             bb.plain('\n%s\n%s\n' % (statusheader, '\n'.join(statuslines)))
 
@@ -262,23 +258,23 @@ python base_eventhandler() {
     # target ones and we'd see dulpicate key names overwriting each other
     # for various PREFERRED_PROVIDERS
     if isinstance(e, bb.event.RecipePreFinalise):
-        if e.data.getVar("TARGET_PREFIX") == e.data.getVar("SDK_PREFIX"):
-            e.data.delVar("PREFERRED_PROVIDER_virtual/${TARGET_PREFIX}binutils")
-            e.data.delVar("PREFERRED_PROVIDER_virtual/${TARGET_PREFIX}gcc-initial")
-            e.data.delVar("PREFERRED_PROVIDER_virtual/${TARGET_PREFIX}gcc")
-            e.data.delVar("PREFERRED_PROVIDER_virtual/${TARGET_PREFIX}g++")
-            e.data.delVar("PREFERRED_PROVIDER_virtual/${TARGET_PREFIX}compilerlibs")
+        if d.getVar("TARGET_PREFIX") == d.getVar("SDK_PREFIX"):
+            d.delVar("PREFERRED_PROVIDER_virtual/${TARGET_PREFIX}binutils")
+            d.delVar("PREFERRED_PROVIDER_virtual/${TARGET_PREFIX}gcc-initial")
+            d.delVar("PREFERRED_PROVIDER_virtual/${TARGET_PREFIX}gcc")
+            d.delVar("PREFERRED_PROVIDER_virtual/${TARGET_PREFIX}g++")
+            d.delVar("PREFERRED_PROVIDER_virtual/${TARGET_PREFIX}compilerlibs")
 
     if isinstance(e, bb.runqueue.sceneQueueComplete):
-        completions = e.data.expand("${STAGING_DIR}/sstatecompletions")
+        completions = d.expand("${STAGING_DIR}/sstatecompletions")
         if os.path.exists(completions):
             cmds = set()
             with open(completions, "r") as f:
                 cmds = set(f)
-            e.data.setVar("completion_function", "\n".join(cmds))
-            e.data.setVarFlag("completion_function", "func", "1")
+            d.setVar("completion_function", "\n".join(cmds))
+            d.setVarFlag("completion_function", "func", "1")
             bb.debug(1, "Executing SceneQueue Completion commands: %s" % "\n".join(cmds))
-            bb.build.exec_func("completion_function", e.data)
+            bb.build.exec_func("completion_function", d)
             os.remove(completions)
 
     if isinstance(e, bb.event.RecipeParsed):
@@ -297,7 +293,7 @@ python base_eventhandler() {
                 if p.startswith("virtual/") and p not in multiwhitelist:
                     profprov = d.getVar("PREFERRED_PROVIDER_" + p)
                     if profprov and pn != profprov:
-                        raise bb.parse.SkipPackage("PREFERRED_PROVIDER_%s set to %s, not %s" % (p, profprov, pn))
+                        raise bb.parse.SkipRecipe("PREFERRED_PROVIDER_%s set to %s, not %s" % (p, profprov, pn))
 }
 
 CONFIGURESTAMPFILE = "${WORKDIR}/configure.sstate"
@@ -313,7 +309,9 @@ base_do_configure() {
 			if [ "${CLEANBROKEN}" != "1" -a \( -e Makefile -o -e makefile -o -e GNUmakefile \) ]; then
 				oe_runmake clean
 			fi
-			find ${B} -ignore_readdir_race -name \*.la -delete
+			# -ignore_readdir_race does not work correctly with -delete;
+			# use xargs to avoid spurious build failures
+			find ${B} -ignore_readdir_race -name \*.la -type f -print0 | xargs -0 rm -f
 		fi
 	fi
 	if [ -n "${CONFIGURESTAMPFILE}" ]; then
@@ -386,12 +384,16 @@ def set_packagetriplet(d):
 python () {
     import string, re
 
+    # Handle backfilling
+    oe.utils.features_backfill("DISTRO_FEATURES", d)
+    oe.utils.features_backfill("MACHINE_FEATURES", d)
+
     # Handle PACKAGECONFIG
     #
     # These take the form:
     #
     # PACKAGECONFIG ??= "<default options>"
-    # PACKAGECONFIG[foo] = "--enable-foo,--disable-foo,foo_depends,foo_runtime_depends"
+    # PACKAGECONFIG[foo] = "--enable-foo,--disable-foo,foo_depends,foo_runtime_depends,foo_runtime_recommends"
     pkgconfigflags = d.getVarFlags("PACKAGECONFIG") or {}
     if pkgconfigflags:
         pkgconfig = (d.getVar('PACKAGECONFIG') or "").split()
@@ -433,12 +435,13 @@ python () {
 
         extradeps = []
         extrardeps = []
+        extrarrecs = []
         extraconf = []
         for flag, flagval in sorted(pkgconfigflags.items()):
             items = flagval.split(",")
             num = len(items)
-            if num > 4:
-                bb.error("%s: PACKAGECONFIG[%s] Only enable,disable,depend,rdepend can be specified!"
+            if num > 5:
+                bb.error("%s: PACKAGECONFIG[%s] Only enable,disable,depend,rdepend,rrecommend can be specified!"
                     % (d.getVar('PN'), flag))
 
             if flag in pkgconfig:
@@ -446,17 +449,20 @@ python () {
                     extradeps.append(items[2])
                 if num >= 4 and items[3]:
                     extrardeps.append(items[3])
+                if num >= 5 and items[4]:
+                    extrarrecs.append(items[4])
                 if num >= 1 and items[0]:
                     extraconf.append(items[0])
             elif num >= 2 and items[1]:
                     extraconf.append(items[1])
         appendVar('DEPENDS', extradeps)
         appendVar('RDEPENDS_${PN}', extrardeps)
+        appendVar('RRECOMMENDS_${PN}', extrarrecs)
         appendVar('PACKAGECONFIG_CONFARGS', extraconf)
 
     pn = d.getVar('PN')
     license = d.getVar('LICENSE')
-    if license == "INVALID":
+    if license == "INVALID" and pn != "defaultpkgname":
         bb.fatal('This recipe does not have the LICENSE field set (%s)' % pn)
 
     if bb.data.inherits_class('license', d):
@@ -465,7 +471,7 @@ python () {
         if unmatched_license_flag:
             bb.debug(1, "Skipping %s because it has a restricted license not"
                  " whitelisted in LICENSE_FLAGS_WHITELIST" % pn)
-            raise bb.parse.SkipPackage("because it has a restricted license not"
+            raise bb.parse.SkipRecipe("because it has a restricted license not"
                  " whitelisted in LICENSE_FLAGS_WHITELIST")
 
     # If we're building a target package we need to use fakeroot (pseudo)
@@ -493,7 +499,7 @@ python () {
             if re.match(need_machine, m):
                 break
         else:
-            raise bb.parse.SkipPackage("incompatible with machine %s (not in COMPATIBLE_MACHINE)" % d.getVar('MACHINE'))
+            raise bb.parse.SkipRecipe("incompatible with machine %s (not in COMPATIBLE_MACHINE)" % d.getVar('MACHINE'))
 
     source_mirror_fetch = d.getVar('SOURCE_MIRROR_FETCH', False)
     if not source_mirror_fetch:
@@ -502,7 +508,7 @@ python () {
             import re
             this_host = d.getVar('HOST_SYS')
             if not re.match(need_host, this_host):
-                raise bb.parse.SkipPackage("incompatible with host %s (not in COMPATIBLE_HOST)" % this_host)
+                raise bb.parse.SkipRecipe("incompatible with host %s (not in COMPATIBLE_HOST)" % this_host)
 
         bad_licenses = (d.getVar('INCOMPATIBLE_LICENSE') or "").split()
 
@@ -522,19 +528,18 @@ python () {
             incompatwl = []
             for lic in bad_licenses:
                 spdx_license = return_spdx(d, lic)
-                for w in ["LGPLv2_WHITELIST_", "WHITELIST_"]:
-                    whitelist.extend((d.getVar(w + lic) or "").split())
-                    if spdx_license:
-                        whitelist.extend((d.getVar(w + spdx_license) or "").split())
-                    '''
-                    We need to track what we are whitelisting and why. If pn is
-                    incompatible we need to be able to note that the image that
-                    is created may infact contain incompatible licenses despite
-                    INCOMPATIBLE_LICENSE being set.
-                    '''
-                    incompatwl.extend((d.getVar(w + lic) or "").split())
-                    if spdx_license:
-                        incompatwl.extend((d.getVar(w + spdx_license) or "").split())
+                whitelist.extend((d.getVar("WHITELIST_" + lic) or "").split())
+                if spdx_license:
+                    whitelist.extend((d.getVar("WHITELIST_" + spdx_license) or "").split())
+                '''
+                We need to track what we are whitelisting and why. If pn is
+                incompatible we need to be able to note that the image that
+                is created may infact contain incompatible licenses despite
+                INCOMPATIBLE_LICENSE being set.
+                '''
+                incompatwl.extend((d.getVar("WHITELIST_" + lic) or "").split())
+                if spdx_license:
+                    incompatwl.extend((d.getVar("WHITELIST_" + spdx_license) or "").split())
 
             if not pn in whitelist:
                 pkgs = d.getVar('PACKAGES').split()
@@ -555,7 +560,7 @@ python () {
                         bb.debug(1, "INCLUDING the package " + pkg)
                 elif all_skipped or incompatible_license(d, bad_licenses):
                     bb.debug(1, "SKIPPING recipe %s because it's %s" % (pn, license))
-                    raise bb.parse.SkipPackage("it has an incompatible license: %s" % license)
+                    raise bb.parse.SkipRecipe("it has an incompatible license: %s" % license)
             elif pn in whitelist:
                 if pn in incompatwl:
                     bb.note("INCLUDING " + pn + " as buildable despite INCOMPATIBLE_LICENSE because it has been whitelisted")
@@ -617,16 +622,20 @@ python () {
             d.appendVarFlag('do_unpack', 'depends', ' lzip-native:do_populate_sysroot')
 
         # *.xz should DEPEND on xz-native for unpacking
-        elif path.endswith('.xz'):
+        elif path.endswith('.xz') or path.endswith('.txz'):
             d.appendVarFlag('do_unpack', 'depends', ' xz-native:do_populate_sysroot')
 
         # .zip should DEPEND on unzip-native for unpacking
-        elif path.endswith('.zip'):
+        elif path.endswith('.zip') or path.endswith('.jar'):
             d.appendVarFlag('do_unpack', 'depends', ' unzip-native:do_populate_sysroot')
 
-        # file is needed by rpm2cpio.sh
-        elif path.endswith('.src.rpm'):
-            d.appendVarFlag('do_unpack', 'depends', ' file-native:do_populate_sysroot')
+        # Some rpm files may be compressed internally using xz (for example, rpms from Fedora)
+        elif path.endswith('.rpm'):
+            d.appendVarFlag('do_unpack', 'depends', ' xz-native:do_populate_sysroot')
+
+        # *.deb should DEPEND on xz-native for unpacking
+        elif path.endswith('.deb'):
+            d.appendVarFlag('do_unpack', 'depends', ' xz-native:do_populate_sysroot')
 
     if needsrcrev:
         d.setVar("SRCPV", "${@bb.fetch2.get_srcrev(d)}")

@@ -1,12 +1,13 @@
 # Copyright (C) 2016 Intel Corporation
 # Released under the MIT license (see COPYING.MIT)
 
+import os
 import shutil
 import subprocess
 
 from oeqa.sdkext.case import OESDKExtTestCase
-from oeqa.core.decorator.depends import OETestDepends
 from oeqa.core.decorator.oeid import OETestID
+from oeqa.utils.httpserver import HTTPService
 
 class DevtoolTest(OESDKExtTestCase):
     @classmethod
@@ -43,28 +44,23 @@ class DevtoolTest(OESDKExtTestCase):
         self.assertEqual(output.startswith(self.tc.sdk_dir), True, \
             msg="Seems that devtool isn't the eSDK one: %s" % output)
 
-    @OETestDepends(['test_devtool_location'])
     def test_devtool_add_reset(self):
         self._run('devtool add myapp %s' % self.myapp_dst)
         self._run('devtool reset myapp')
 
     @OETestID(1605)
-    @OETestDepends(['test_devtool_location'])
     def test_devtool_build_make(self):
         self._test_devtool_build(self.myapp_dst)
 
     @OETestID(1606)
-    @OETestDepends(['test_devtool_location'])
     def test_devtool_build_esdk_package(self):
         self._test_devtool_build_package(self.myapp_dst)
 
     @OETestID(1607)
-    @OETestDepends(['test_devtool_location'])
     def test_devtool_build_cmake(self):
         self._test_devtool_build(self.myapp_cmake_dst)
 
     @OETestID(1608)
-    @OETestDepends(['test_devtool_location'])
     def test_extend_autotools_recipe_creation(self):
         req = 'https://github.com/rdfa/librdfa'
         recipe = "librdfa"
@@ -76,7 +72,6 @@ class DevtoolTest(OESDKExtTestCase):
             self._run('devtool reset %s' % recipe)
 
     @OETestID(1609)
-    @OETestDepends(['test_devtool_location'])
     def test_devtool_kernelmodule(self):
         docfile = 'https://github.com/umlaeute/v4l2loopback.git'
         recipe = 'v4l2loopback-driver'
@@ -87,7 +82,6 @@ class DevtoolTest(OESDKExtTestCase):
             self._run('devtool reset %s' % recipe)
 
     @OETestID(1610)
-    @OETestDepends(['test_devtool_location'])
     def test_recipes_for_nodejs(self):
         package_nodejs = "npm://registry.npmjs.org;name=winston;version=2.2.0"
         self._run('devtool add %s ' % package_nodejs)
@@ -95,3 +89,33 @@ class DevtoolTest(OESDKExtTestCase):
             self._run('devtool build %s ' % package_nodejs)
         finally:
             self._run('devtool reset %s '% package_nodejs)
+
+class SdkUpdateTest(OESDKExtTestCase):
+    @classmethod
+    def setUpClass(self):
+        self.publish_dir = os.path.join(self.tc.sdk_dir, 'esdk_publish')
+        if os.path.exists(self.publish_dir):
+            shutil.rmtree(self.publish_dir)
+        os.mkdir(self.publish_dir)
+
+        base_tcname = "%s/%s" % (self.td.get("SDK_DEPLOY", ''),
+            self.td.get("TOOLCHAINEXT_OUTPUTNAME", ''))
+        tcname_new = "%s-new.sh" % base_tcname
+        if not os.path.exists(tcname_new):
+            tcname_new = "%s.sh" % base_tcname
+
+        cmd = 'oe-publish-sdk %s %s' % (tcname_new, self.publish_dir)
+        subprocess.check_output(cmd, shell=True)
+
+        self.http_service = HTTPService(self.publish_dir)
+        self.http_service.start()
+
+        self.http_url = "http://127.0.0.1:%d" % self.http_service.port
+
+    def test_sdk_update_http(self):
+        output = self._run("devtool sdk-update \"%s\"" % self.http_url)
+
+    @classmethod
+    def tearDownClass(self):
+        self.http_service.stop()
+        shutil.rmtree(self.publish_dir)

@@ -22,6 +22,7 @@ and returns an instance of the class.
 #   * Too many instance attributes (R0902)
 # pylint: disable=R0902
 
+import errno
 import os
 import struct
 import array
@@ -34,14 +35,18 @@ def get_block_size(file_obj):
     Returns block size for file object 'file_obj'. Errors are indicated by the
     'IOError' exception.
     """
-
-    from fcntl import ioctl
-    import struct
-
     # Get the block size of the host file-system for the image file by calling
     # the FIGETBSZ ioctl (number 2).
-    binary_data = ioctl(file_obj, 2, struct.pack('I', 0))
-    return struct.unpack('I', binary_data)[0]
+    binary_data = fcntl.ioctl(file_obj, 2, struct.pack('I', 0))
+    bsize = struct.unpack('I', binary_data)[0]
+    if not bsize:
+        import os
+        stat = os.fstat(file_obj.fileno())
+        if hasattr(stat, 'st_blksize'):
+            bsize = stat.st_blksize
+        else:
+            raise IOError("Unable to determine block size")
+    return bsize
 
 class ErrorNotSupp(Exception):
     """
@@ -185,9 +190,9 @@ def _lseek(file_obj, offset, whence):
     except OSError as err:
         # The 'lseek' system call returns the ENXIO if there is no data or
         # hole starting from the specified offset.
-        if err.errno == os.errno.ENXIO:
+        if err.errno == errno.ENXIO:
             return -1
-        elif err.errno == os.errno.EINVAL:
+        elif err.errno == errno.EINVAL:
             raise ErrorNotSupp("the kernel or file-system does not support "
                                "\"SEEK_HOLE\" and \"SEEK_DATA\"")
         else:
@@ -228,7 +233,7 @@ class FilemapSeek(_FilemapBase):
         try:
             tmp_obj = tempfile.TemporaryFile("w+", dir=directory)
         except IOError as err:
-            raise ErrorNotSupp("cannot create a temporary in \"%s\": %s"
+            raise ErrorNotSupp("cannot create a temporary in \"%s\": %s" \
                               % (directory, err))
 
         try:
@@ -390,12 +395,12 @@ class FilemapFiemap(_FilemapBase):
         except IOError as err:
             # Note, the FIEMAP ioctl is supported by the Linux kernel starting
             # from version 2.6.28 (year 2008).
-            if err.errno == os.errno.EOPNOTSUPP:
+            if err.errno == errno.EOPNOTSUPP:
                 errstr = "FilemapFiemap: the FIEMAP ioctl is not supported " \
                          "by the file-system"
                 self._log.debug(errstr)
                 raise ErrorNotSupp(errstr)
-            if err.errno == os.errno.ENOTTY:
+            if err.errno == errno.ENOTTY:
                 errstr = "FilemapFiemap: the FIEMAP ioctl is not supported " \
                          "by the kernel"
                 self._log.debug(errstr)
@@ -530,8 +535,18 @@ def filemap(image, log=None):
     except ErrorNotSupp:
         return FilemapSeek(image, log)
 
-def sparse_copy(src_fname, dst_fname, offset=0, skip=0, api=None):
-    """Efficiently copy sparse file to or into another file."""
+def sparse_copy(src_fname, dst_fname, skip=0, seek=0,
+                length=0, api=None):
+    """
+    Efficiently copy sparse file to or into another file.
+
+    src_fname: path to source file
+    dst_fname: path to destination file
+    skip: skip N bytes at thestart of src
+    seek: seek N bytes from the start of dst
+    length: read N bytes from src and write them to dst
+    api: FilemapFiemap or FilemapSeek object
+    """
     if not api:
         api = filemap
     fmap = api(src_fname)
@@ -539,17 +554,32 @@ def sparse_copy(src_fname, dst_fname, offset=0, skip=0, api=None):
         dst_file = open(dst_fname, 'r+b')
     except IOError:
         dst_file = open(dst_fname, 'wb')
-        dst_file.truncate(os.path.getsize(src_fname))
+        if length:
+            dst_size = length + seek
+        else:
+            dst_size = os.path.getsize(src_fname) + seek - skip
+        dst_file.truncate(dst_size)
 
+    written = 0
     for first, last in fmap.get_mapped_ranges(0, fmap.blocks_cnt):
         start = first * fmap.block_size
         end = (last + 1) * fmap.block_size
 
+        if skip >= end:
+            continue
+
         if start < skip < end:
-            fmap._f_image.seek(skip, os.SEEK_SET)
-        else:
-            fmap._f_image.seek(start, os.SEEK_SET)
-        dst_file.seek(offset + start, os.SEEK_SET)
+            start = skip
+
+        fmap._f_image.seek(start, os.SEEK_SET)
+
+        written += start - skip - written
+        if length and written >= length:
+            dst_file.seek(seek + length, os.SEEK_SET)
+            dst_file.close()
+            return
+
+        dst_file.seek(seek + start - skip, os.SEEK_SET)
 
         chunk_size = 1024 * 1024
         to_read = end - start
@@ -558,7 +588,14 @@ def sparse_copy(src_fname, dst_fname, offset=0, skip=0, api=None):
         while read < to_read:
             if read + chunk_size > to_read:
                 chunk_size = to_read - read
-            chunk = fmap._f_image.read(chunk_size)
+            size = chunk_size
+            if length and written + size > length:
+                size = length - written
+            chunk = fmap._f_image.read(size)
             dst_file.write(chunk)
-            read += chunk_size
+            read += size
+            written += size
+            if written == length:
+                dst_file.close()
+                return
     dst_file.close()

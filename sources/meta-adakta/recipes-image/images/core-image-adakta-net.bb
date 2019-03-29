@@ -10,12 +10,9 @@ IMAGE_INSTALL = "packagegroup-core-boot libstdc++ ${CORE_IMAGE_EXTRA_INSTALL}"
 IMAGE_LINGUAS = " "
 IMAGE_INSTALL_append += " kernel-modules kernel"
 
-LICENSE = "MIT"
-
 # First include a base image to base things off
 inherit core-image
 
 IMAGE_FEATURES +="ssh-server-openssh"
-
-CORE_IMAGE_EXTRA_INSTALL += "usb-modeswitch usb-modeswitch-data dnsmasq lsof usbutils pciutils proftpd curl wireless-tools iptables iproute2 tcpdump ppp screen libnl mtd-utils mtd-utils-ubifs mtd-utils-jffs2 mtd-utils-misc jsoncpp bridge-utils psmisc sysstat coreutils ntp net-snmp net-snmp-server openvpn xl2tpd strongswan ppp-l2tp ppp-minconn ppp-password ppp-radius ppp-tools ppp-oa ppp-oe ppp-winbind pptp-linux i2c-tools spitools spidev-test" 
-
+CORE_IMAGE_EXTRA_INSTALL += "usb-modeswitch usb-modeswitch-data ppp-minconn ppp-password ppp-radius ppp-tools ppp-oa ppp-oe ppp-winbind ppp-l2tp lsof usbutils pciutils proftpd curl bridge-utils tcpdump  pptp-linux xl2tpd wireless-tools iptables iproute2 ppp screen libnl mtd-utils mtd-utils-ubifs mtd-utils-jffs2 mtd-utils-misc jsoncpp psmisc sysstat coreutils ntp net-snmp net-snmp-server openvpn strongswan i2c-tools spitools spidev-test dnsmasq lua mysql-python mc nano wget tzdata-posix nodejs sqlite redis rpm util-linux dosfstools dpkg haveged ntfs-3g hostapd wpa-supplicant gstreamer1.0-rtsp-server gstreamer1.0-plugins-good gstreamer1.0-plugins-base gstreamer1.0 htop" 
+#gstreamer1.0-plugins-imx

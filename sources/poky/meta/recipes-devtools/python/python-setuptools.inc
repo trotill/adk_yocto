@@ -2,20 +2,38 @@ SUMMARY = "Download, build, install, upgrade, and uninstall Python packages"
 HOMEPAGE = "https://pypi.python.org/pypi/setuptools"
 SECTION = "devel/python"
 LICENSE = "MIT"
+LIC_FILES_CHKSUM = "file://LICENSE;beginline=1;endline=19;md5=9a33897f1bca1160d7aad3835152e158"
 
-LIC_FILES_CHKSUM = "file://setup.py;beginline=146;endline=146;md5=3e8df024d6c1442d18e84acf8fbbc475"
+PYPI_PACKAGE_EXT = "zip"
 
-SRCNAME = "setuptools"
+inherit pypi
 
-SRC_URI = "https://files.pythonhosted.org/packages/source/s/${SRCNAME}/${SRCNAME}-${PV}.tar.gz"
+SRC_URI_append_class-native = " file://0001-conditionally-do-not-fetch-code-by-easy_install.patch"
 
-SRC_URI[md5sum] = "8b67868c3430e978833ebd0d1b766694"
-SRC_URI[sha256sum] = "8303fb24306385f09bf8b0e5a385c1548e42e8efc08558d64049bc0d55ea012d"
+SRC_URI[md5sum] = "260630ae1a64bafa39dcc53404d63829"
+SRC_URI[sha256sum] = "012adb8e25fbfd64c652e99e7bab58799a3aaf05d39ab38561f69190a909015f"
 
-UPSTREAM_CHECK_URI = "https://pypi.python.org/pypi/setuptools"
+DEPENDS += "${PYTHON_PN}"
 
-S = "${WORKDIR}/${SRCNAME}-${PV}"
-
+RDEPENDS_${PN} = "\
+  ${PYTHON_PN}-compile \
+  ${PYTHON_PN}-compression \
+  ${PYTHON_PN}-ctypes \
+  ${PYTHON_PN}-distutils \
+  ${PYTHON_PN}-email \
+  ${PYTHON_PN}-html \
+  ${PYTHON_PN}-netserver \
+  ${PYTHON_PN}-numbers \
+  ${PYTHON_PN}-pkgutil \
+  ${PYTHON_PN}-plistlib \
+  ${PYTHON_PN}-shell \
+  ${PYTHON_PN}-stringold \
+  ${PYTHON_PN}-threading \
+  ${PYTHON_PN}-unittest \
+  ${PYTHON_PN}-xml \
+"
 do_install_prepend() {
     install -d ${D}${PYTHON_SITEPACKAGES_DIR}
 }
+
+BBCLASSEXTEND = "native nativesdk"
