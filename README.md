@@ -31,11 +31,11 @@ $: MACHINE=adakta_nano6ull DISTRO=fslc-framebuffer source setup-environment ADK6
 
 2) Create your distro or compile the demo:
 
-core-image-minimal-xfce (ADK only)  
+core-image-minimal-xfce (ADK only, pyro release only!!!)  
 core-image-adakta-net  
 core-image-minimal  
 core-image-sato  
-core-image-x11 (ADK only)  
+core-image-x11 (ADK only, pyro release only!!!)  
 For example: 
 $: bitbake core-image-adakta-net  
 
