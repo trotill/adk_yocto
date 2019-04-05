@@ -1,0 +1,11 @@
+ADK BOARD
+M:	ilya Gorchakov <ilya.gorchakov@adakta.ru>
+S:	Maintained
+F:	board/adakta/adk/
+F:	include/configs/adk.h
+F:	configs/imx6dl-adk_defconfig
+F:	configs/imx6dl2g-adk_defconfig
+F:	configs/imx6q-adk_defconfig
+F:	configs/imx6q2g-adk_defconfig
+F:	configs/imx6s-adk_defconfig
+F:	configs/imx6s1g-adk_defconfig

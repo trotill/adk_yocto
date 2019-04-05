@@ -22,9 +22,9 @@ SRCBRANCH = "boundary-v2018.07"
 
 # ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "emx","file://0001-Add-adakta-emx6-support.patch","",d)}
 SRC_URI = "git://github.com/boundarydevices/u-boot-imx6.git;branch=${SRCBRANCH} \
-		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "adk","file://0001-adk-support.patch","",d)} \
-		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "adkstand","file://0001-adk-support.patch","",d)} \
-		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "emx","file://0001-Add-adakta-emx6-support.patch","",d)} \
+		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "adkstand","file://git","",d)} \
+		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "adk","file://git","",d)} \
+		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "emx","file://git","",d)} \
 		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "adakta_nano6ull","file://adakta_nano6ull_support.patch","",d)} \
 		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "adakta_dp6ull","file://dp6ull_support.patch","",d)} \
 		   ${@bb.utils.contains_any("KERNEL_DEFCONFIG_TYPE", "emxstand","file://0001-Add-adakta-emx6-support.patch","",d)}"

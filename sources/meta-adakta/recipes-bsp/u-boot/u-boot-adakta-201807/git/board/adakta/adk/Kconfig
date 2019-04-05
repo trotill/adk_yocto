@@ -1,0 +1,15 @@
+if TARGET_ADK
+
+config SYS_BOARD
+	default "adk"
+
+config SYS_VENDOR
+	default "adakta"
+
+config SYS_CONFIG_NAME
+	default "adk"
+
+config SYS_SOC
+	default "mx6"
+
+endif
