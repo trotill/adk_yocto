@@ -19,11 +19,11 @@ How to use?
 1) Clone
 
 $: git clone https://github.com/trotill/adk_yocto.git  
-$: cd adk_yocto/ 
-For pyro release: 
+$: cd adk_yocto/  
+For pyro release:  
 $: git checkout origin/pyro_adk -b pyro_adk  
-For thud release: 
-$: git checkout origin/thud_adk -b thud_adk 
+For thud release:  
+$: git checkout origin/thud_adk -b thud_adk  
 For ADK  
 $: MACHINE=adakta-adk DISTRO=fslc-x11 source setup-environment ADK/  
 For ADK6ull  
