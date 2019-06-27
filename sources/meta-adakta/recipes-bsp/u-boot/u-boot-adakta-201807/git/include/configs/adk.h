@@ -326,6 +326,28 @@
 #define LOG_CMA_STR ""
 #endif
 
+
+#ifdef CONFIG_USB_STORAGE
+#define DRIVE_USB "usb "
+#else
+#define DRIVE_USB
+#endif
+
+
+#ifdef CONFIG_CMD_MMC
+#define CONFIG_DRIVE_MMC "mmc "
+#else
+#define CONFIG_DRIVE_MMC
+#endif
+
+#ifdef CONFIG_CMD_SATA
+#define CONFIG_DRIVE_SATA "sata "
+#else
+#define CONFIG_DRIVE_SATA
+#endif
+ 
+#define CONFIG_DRIVE_TYPES CONFIG_DRIVE_SATA CONFIG_DRIVE_MMC DRIVE_USB
+	
 #define ENV_SETTINGS \
 	"clearenv=if sf probe || sf probe ; then " \
 		"sf erase 0xc0000 0x2000 && " \
@@ -357,7 +379,16 @@
 	"scriptaddr=" RAM_SCRIPT "\0" \
 	"splashflash=" SPLASH_FLASH "\0" \
 	"uboot_defconfig=" CONFIG_DEFCONFIG "\0" \
-	"upgradeu=setenv boot_scripts upgrade.scr; boot\0" \
+	"upgradeu=for dtype in " CONFIG_DRIVE_TYPES \
+		"; do " \
+		"for disk in 0 1 ; do ${dtype} dev ${disk} ;" \
+		     "for fs in fat ext2 ; do " \
+				"${fs}load ${dtype} ${disk}:1 10008000 " \
+					"/6x_upgrade " \
+					"&& source 10008000 ; " \
+			"done ; " \
+		"done ; " \
+	"done\0" \
 	"usb_pgood_delay=2000\0" \
 	"usbnet_devaddr=00:19:b8:00:00:02\0" \
 	"usbnet_hostaddr=00:19:b8:00:00:01\0" \
@@ -370,7 +401,23 @@
 		"tftpboot " RAM_KERNEL " 10.0.0.1:uImage-${board}-recovery && " \
 		"tftpboot " RAM_RAMDISK " 10.0.0.1:uramdisk-${board}-recovery.img && " \
 		"bootm " RAM_KERNEL " " RAM_RAMDISK "\0" \
-	BOOTENV
+	"bootcmd=for dtype in " CONFIG_DRIVE_TYPES \
+		"; do " \
+			"for disk in 0 1 ; do ${dtype} dev ${disk} ;" \
+				"for fs in fat ext2 ; do " \
+					"${fs}load " \
+						"${dtype} ${disk}:1 " \
+						"10008000 " \
+						"/6x_bootscript" \
+						"&& source 10008000 ; " \
+				"done ; " \
+			"done ; " \
+		"done; " \
+		"setenv stdout serial,vga ; " \
+		"echo ; echo 6x_bootscript not found ; " \
+		"echo ; echo serial console at 115200, 8N1 ; echo ; " \
+		"echo details at http://boundarydevices.com/6q_bootscript ; " \
+		"setenv stdout serial\0" \
 
 /* Miscellaneous configurable options */
 #define CONFIG_SYS_MEMTEST_START       RAM_BASE
